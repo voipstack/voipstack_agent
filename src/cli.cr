@@ -3,6 +3,10 @@ require "option_parser"
 require "log"
 require "freeswitch-esl"
 
+COMPILE_GIT_REV={{ env("COMPILE_GIT_REV") || "HEAD"}}
+COMPILE_TIME={{ env("COMPILE_TIME") }}
+COMPILE_SHARD_VERSION={{ env("COMPILE_SHARD_VERSION") }}
+
 Log.setup_from_env(default_level: Log::Severity::Info)
 
 ENV["VOIPSTACK_AGENT_SOFTSWITCH_URL"] ||= ""
@@ -32,6 +36,12 @@ OptionParser.parse do |parser|
   parser.on("-a", "--action-url URL", "Action URL") { |value| action_url = value }
   parser.on("-i", "--softswitch-id ID", "Softswitch ID") { |value| softswitch_id = value }
   parser.on("-b", "--block-size INT", "Block Size") { |value| block_size = value.to_i }
+  parser.on("-v", "--version", "Version") {
+    puts "VERSION: #{COMPILE_SHARD_VERSION}"
+    puts "GIT REV: #{COMPILE_GIT_REV}"
+    puts "TIME: #{COMPILE_TIME}"
+    exit 1
+  }
   parser.on("-h", "--help", "Help") do
     puts parser
     exit 1
