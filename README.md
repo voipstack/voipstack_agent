@@ -8,9 +8,10 @@ TODO: Write installation instructions here
 
 ## Usage
 
-TODO: Write usage instructions here
+`voipstack_agent -s "fs://ClueCon:<PASS>@<IP>" -i "<TOKEN>"`
 
 ## Development
+
 Step by step to run the agent:
 
 1. Generate the priv/pub keys in the same project:
