@@ -1,6 +1,6 @@
-# agent
+# VOIPStack Agent
 
-TODO: Write a description here
+[Client for voipstack platform](https://www.voipstack.io)
 
 ## Installation
 
@@ -22,9 +22,7 @@ openssl rsa -pubout -in agent.key -out agent.pem
 2. Copy the agent.pem to the clipboard
 3. Go to the admin webpage, create or open a tenant and inside of some softswitch add the agent public key.
 4. Copy the token from the softswitch you added the agent public key
-5. Open a terminal and run `rake endpoint`
-6. Open a new terminal and run `rake "agent[ADD_HERE_THE_TOKEN_FROM_ADMIN]"`
-
+5. Open a terminal and run `voipstack_agent -s fs://ClueCon:ClueCon@ip`
 
 ## Contributing
 
@@ -36,4 +34,4 @@ openssl rsa -pubout -in agent.key -out agent.pem
 
 ## Contributors
 
-- [Jovany Leandro G.C](https://github.com/your-github-user) - creator and maintainer
+- [Jovany Leandro G.C](https://github.com/voipstack/voipstack_agent) - creator and maintainer
