@@ -8,7 +8,7 @@ targets:
   voipstack_agent:
     main: src/cli.cr
 
-crystal: '>= 1.13.3'
+crystal: '>= 1.16'
 
 dependencies:
   crest:
