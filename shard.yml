@@ -5,7 +5,7 @@ authors:
   - Jovany Leandro G.C <bit4bit@riseup.net>
 
 targets:
-  agent:
+  voipstack_agent:
     main: src/cli.cr
 
 crystal: '>= 1.13.3'
