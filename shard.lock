@@ -1,0 +1,30 @@
+version: 2.0
+shards:
+  asterisk-ami:
+    git: https://github.com/bit4bit/asterisk-ami.cr.git
+    version: 0.1.0+git.commit.800d27ff93c23a81b6c5ff3021cdb854e38f2000
+
+  crest:
+    git: https://github.com/mamantoha/crest.git
+    version: 1.5.1
+
+  freeswitch-esl:
+    git: https://github.com/bit4bit/freeswitch-esl.cr.git
+    version: 1.0.2
+
+  http-client-digest_auth:
+    git: https://github.com/mamantoha/http-client-digest_auth.git
+    version: 0.6.0
+
+  http_proxy:
+    git: https://github.com/mamantoha/http_proxy.git
+    version: 0.13.0
+
+  openssl_ext:
+    git: https://github.com/voipstack/openssl_ext.git
+    version: 2.4.4+git.commit.18fa0045cef782ebb2d49458426bef9a02186084
+
+  phoenixchannels:
+    git: https://github.com/bit4bit/phoenixchannels.cr.git
+    version: 0.1.0+git.commit.f9eb27b25a8be3781226cf380e876f5a05eb5f32
+

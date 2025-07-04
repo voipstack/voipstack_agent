@@ -1,0 +1,24 @@
+name: agent
+version: 0.1.0
+
+authors:
+  - Jovany Leandro G.C <bit4bit@riseup.net>
+
+targets:
+  agent:
+    main: src/cli.cr
+
+crystal: '>= 1.13.3'
+
+dependencies:
+  crest:
+    github: mamantoha/crest
+  freeswitch-esl:
+    github: bit4bit/freeswitch-esl.cr
+  asterisk-ami:
+    github: bit4bit/asterisk-ami.cr
+  openssl_ext:
+    github: voipstack/openssl_ext
+    license: MIT
+  phoenixchannels:
+    github: bit4bit/phoenixchannels.cr
