@@ -20,11 +20,11 @@ collector_limit_queue = ENV["VOIPSTACK_AGENT_COLLECTOR_LIMIT_QUEUE"].to_i
 softswitch_id = nil
 softswitch_url = ENV["VOIPSTACK_AGENT_SOFTSWITCH_URL"]
 softswitch_config_path = nil
-base_action_url = "https://action.voipstack.io"
+base_action_url = "https://endpoint.voipstack.io"
 block_size = 128
 
 collector_timeout = ENV["VOIPSTACK_AGENT_COLLECTOR_TICK_SECONDS"].to_i
-event_url = "wss://api.voipstack.io"
+event_url = "wss://endpoint.voipstack.io/socket"
 action_url = ""
 private_key_pem_path = ENV["VOIPSTACK_AGENT_PRIVATE_KEY_PEM_PATH"]
 
