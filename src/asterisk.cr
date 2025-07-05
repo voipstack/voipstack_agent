@@ -29,6 +29,20 @@ module Agent
       "1.14"
     end
 
+    EVENTS_TO_PROCESS = %w[
+      VIRTUAL
+      Newchannel
+      Newstate
+      DeviceStateChange
+      Hangup
+      QueueParams
+      QueueMember
+      AgentConnect
+      AgentComplete
+      AgentCalled
+      AgentRingNoAnswer
+    ]
+
     def setup(config, driver_config_path = nil)
       if driver_config_path.nil?
         raise "asterisk requires configuration file"
@@ -46,6 +60,7 @@ module Agent
       else
         spawn name: "asterisk: events" do
           conn.pull_events do |event|
+            next if !EVENTS_TO_PROCESS.includes?(event.get("Event", ""))
             @events.send(event)
           end
         rescue ex

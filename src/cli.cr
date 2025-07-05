@@ -3,9 +3,9 @@ require "option_parser"
 require "log"
 require "freeswitch-esl"
 
-COMPILE_GIT_REV={{ env("COMPILE_GIT_REV") || "HEAD"}}
-COMPILE_TIME={{ env("COMPILE_TIME") }}
-COMPILE_SHARD_VERSION={{ env("COMPILE_SHARD_VERSION") }}
+COMPILE_GIT_REV       = {{ env("COMPILE_GIT_REV") || "HEAD" }}
+COMPILE_TIME          = {{ env("COMPILE_TIME") }}
+COMPILE_SHARD_VERSION = {{ env("COMPILE_SHARD_VERSION") }}
 
 Log.setup_from_env(default_level: Log::Severity::Info)
 
@@ -65,7 +65,7 @@ collector = Agent::CollectorOnDemand.new(collector: main_collector)
 if action_url.empty?
   action_url = base_action_url + "/#{softswitch.software}/#{softswitch.version}"
 end
-Log.debug { "ACTION URL #{action_url} "}
+Log.debug { "ACTION URL #{action_url} " }
 
 http_getter = Agent::ActionHTTPGetter.new(url: action_url, softswitch_id: softswitch_id.not_nil!, http_client: http_client)
 actions = Agent::ActionRunner.new(getter: http_getter)
