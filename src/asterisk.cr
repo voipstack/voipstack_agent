@@ -90,7 +90,7 @@ module Agent
     def bootstrap : Array(Agent::Event)
       next_events = [] of Agent::Event
 
-      publish_list_ari_endpoints(next_events)
+      publish_list_endpoints(next_events)
       publish_list_calls(next_events)
       next_events << publish_virtual_event(
         @softswitch_id,
@@ -98,7 +98,7 @@ module Agent
         conn.request(Asterisk::Action.new(
           "QueueStatus",
           UUID.v4.hexstring
-        )).message.to_json)
+        )).first.not_nil!.message.to_json)
 
       next_events
     end
@@ -130,15 +130,29 @@ module Agent
       @conn.not_nil!
     end
 
-    private def publish_list_ari_endpoints(next_events)
-      @asterisk.not_nil!.ari("/endpoints") do |r, success?|
-        unless success?
-          Log.error { "Asterisk: fails to get endpoints: #{r}" }
-          next
-        end
+    private def publish_list_endpoints(next_events)
+      resp = @conn.not_nil!.request(Asterisk::Action.new("PJSIPShowEndpoints", UUID.v4.hexstring))
 
-        next_events << publish_virtual_event(@softswitch_id, "ari.endpoints", r)
-      end
+      r = JSON.build do |json|
+        json.array do
+          resp.each do |event|
+            next if event.get("ObjectType", "") != "endpoint"
+
+            # skip trunks or carriers
+            if event.get("Auths", "") == "" && event.get("OutboundAuths", "") != ""
+              next
+            end
+
+            json.start_object
+            json.field("technology", "PJSIP")
+            json.field("resource", event.get("ObjectName", ""))
+            json.field("state", event.get("DeviceState", "").downcase == "unavailable" ? "offline" : "online")
+            json.end_object
+          end
+        end
+      end.to_s
+
+      next_events << publish_virtual_event(@softswitch_id, "ari.endpoints", r)
     end
 
     private def publish_list_calls(next_events)

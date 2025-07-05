@@ -2,7 +2,7 @@ version: 2.0
 shards:
   asterisk-ami:
     git: https://github.com/bit4bit/asterisk-ami.cr.git
-    version: 0.1.0+git.commit.800d27ff93c23a81b6c5ff3021cdb854e38f2000
+    version: 0.2.0+git.commit.6548e91cc9f836a9d12718646ed5e16268d7274e
 
   crest:
     git: https://github.com/mamantoha/crest.git
