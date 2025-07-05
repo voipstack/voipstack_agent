@@ -5,32 +5,6 @@ require "log"
 
 module Agent
   class AsteriskState < SoftswitchState
-    class AsteriskRequest
-      def initialize(url : String)
-        @uri = URI.parse(url)
-      end
-
-      def connect(timeout = 5.seconds)
-        ari("/asterisk/info") { |r, s| s }
-      end
-
-      def endpoints
-        ari("/endpoints") { |r, s|
-          raise "fails to get endpoints" unless s
-          r
-        }
-      end
-
-      def ari(action, method = "GET", &)
-        cmd = "curl --fail-early -s -u #{@uri.user.not_nil!}:#{@uri.password.not_nil!} -X #{method} http://#{@uri.host.not_nil!}:#{@uri.port.not_nil!}/ari#{action}"
-        Log.debug { "ARI: executing #{cmd}" }
-        res = `#{cmd}`
-        Log.debug { "ARI: response #{res}" }
-
-        yield res, $?.success?
-      end
-    end
-
     class Config
       include YAML::Serializable
 
@@ -60,10 +34,6 @@ module Agent
         raise "asterisk requires configuration file"
       end
       driver_config = Config.from_file(driver_config_path.not_nil!)
-      @asterisk = AsteriskRequest.new(driver_config.ari_url)
-      if !@asterisk.not_nil!.connect(1.second)
-        raise "asterisk: fails to connecto to ari using #{driver_config.ari_url}"
-      end
 
       @conn = Asterisk::Ami::Inbound.new(
         config.softswitch.host.not_nil!,
@@ -133,6 +103,7 @@ module Agent
     private def publish_list_endpoints(next_events)
       resp = @conn.not_nil!.request(Asterisk::Action.new("PJSIPShowEndpoints", UUID.v4.hexstring))
 
+      # emulate ari response
       r = JSON.build do |json|
         json.array do
           resp.each do |event|
@@ -156,14 +127,34 @@ module Agent
     end
 
     private def publish_list_calls(next_events)
-      @asterisk.not_nil!.ari("/channels") do |r, success?|
-        unless success?
-          Log.error { "Asterisk: fails to gen endpoints: #{r}" }
-          next
+      resp = @conn.not_nil!.request(Asterisk::Action.new("CoreShowChannels", UUID.v4.hexstring))
+      # emulate ari response
+      r = JSON.build do |json|
+        json.array do
+          resp.each do |event|
+            next if event.get("Event", "") != "CoreShowChannel"
+            json.start_object
+            json.field("name", event.get("Channel").not_nil!)
+            json.field("id", event.get("Uniqueid").not_nil!)
+            json.field("state", event.get("ChannelStateDesc").not_nil!)
+            json.field("caller") do
+              json.start_object
+              json.field("number", event.get("CallerIDNum"))
+              json.field("name", event.get("CallerIDName"))
+              json.end_object
+            end
+            json.field("dialplan") do
+              json.start_object
+              json.field("exten", event.get("Exten").not_nil!)
+              json.field("context", event.get("Context").not_nil!)
+              json.end_object
+            end
+            json.end_object
+          end
         end
+      end.to_s
 
-        next_events << publish_virtual_event(@softswitch_id, "ari.channels", r)
-      end
+      next_events << publish_virtual_event(@softswitch_id, "ari.channels", r)
     end
 
     private def publish_virtual_event(softswitch_id, name, response)
