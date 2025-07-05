@@ -5,16 +5,6 @@ require "log"
 
 module Agent
   class AsteriskState < SoftswitchState
-    class Config
-      include YAML::Serializable
-
-      property ari_url : String
-
-      def self.from_file(path : String)
-        self.from_yaml(File.read(path))
-      end
-    end
-
     @conn : Asterisk::Ami::Inbound? = nil
     @events = Channel(Asterisk::Event).new(1024*16)
 
@@ -45,11 +35,6 @@ module Agent
     ]
 
     def setup(config, driver_config_path = nil)
-      if driver_config_path.nil?
-        raise "asterisk requires configuration file"
-      end
-      driver_config = Config.from_file(driver_config_path.not_nil!)
-
       @conn = Asterisk::Ami::Inbound.new(
         config.softswitch.host.not_nil!,
         config.softswitch.port.not_nil!,
