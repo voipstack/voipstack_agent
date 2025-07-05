@@ -76,7 +76,8 @@ module Agent
     def bootstrap : Array(Agent::Event)
       next_events = [] of Agent::Event
 
-      publish_list_endpoints(next_events)
+      publish_list_chan_sip_endpoints(next_events)
+      publish_list_pjsip_endpoints(next_events)
       publish_list_calls(next_events)
       next_events << publish_virtual_event(
         @softswitch_id,
@@ -116,7 +117,29 @@ module Agent
       @conn.not_nil!
     end
 
-    private def publish_list_endpoints(next_events)
+    private def publish_list_chan_sip_endpoints(next_events)
+      resp = @conn.not_nil!.request(Asterisk::Action.new("SIPpeers", UUID.v4.hexstring))
+
+      # emulate ari response
+      r = JSON.build do |json|
+        json.array do
+          resp.each do |event|
+            next if event.get("Event", "") != "PeerEntry"
+
+            json.start_object
+            json.field("technology", "SIP")
+            json.field("resource", event.get("ObjectName", ""))
+            json.field("state", event.get("Status", "").downcase.includes?("OK") || event.get("Status", "").downcase == "unmonitored" ? "online" : "offline")
+            json.field("creationtime", Time::Format::ISO_8601_DATE_TIME.format(Time.utc))
+            json.end_object
+          end
+        end
+      end.to_s
+
+      next_events << publish_virtual_event(@softswitch_id, "ari.endpoints", r)
+    end
+
+    private def publish_list_pjsip_endpoints(next_events)
       resp = @conn.not_nil!.request(Asterisk::Action.new("PJSIPShowEndpoints", UUID.v4.hexstring))
 
       # emulate ari response
