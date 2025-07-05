@@ -41,6 +41,7 @@ module Agent
       AgentComplete
       AgentCalled
       AgentRingNoAnswer
+      QueueStatus
     ]
 
     def setup(config, driver_config_path = nil)
@@ -133,6 +134,7 @@ module Agent
             json.field("technology", "PJSIP")
             json.field("resource", event.get("ObjectName", ""))
             json.field("state", event.get("DeviceState", "").downcase == "unavailable" ? "offline" : "online")
+            json.field("creationtime", Time::Format::ISO_8601_DATE_TIME.format(Time.utc))
             json.end_object
           end
         end
@@ -164,6 +166,7 @@ module Agent
               json.field("context", event.get("Context").not_nil!)
               json.end_object
             end
+            json.field("creationtime", Time::Format::ISO_8601_DATE_TIME.format(Time.utc))
             json.end_object
           end
         end
