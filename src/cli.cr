@@ -1,5 +1,6 @@
 require "./agent"
 require "option_parser"
+require "colorize"
 require "log"
 require "freeswitch-esl"
 
@@ -46,9 +47,9 @@ OptionParser.parse do |parser|
     pkey = OpenSSL::PKey::RSA.new(1024)
     File.write(path, pkey.to_pem)
 
-    puts "Keys generated successfully"
+    puts "Keys generated successfully".colorize(:green)
     puts "Private key saved to #{path}."
-    puts "Register the agent (admin.voipstack.io) using the following public key:"
+    puts "Register this agent in admin.voipstack.io using the following public key:".colorize(:green)
     puts pkey.public_key.to_pem
     exit 0
   }
