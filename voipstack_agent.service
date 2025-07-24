@@ -4,11 +4,16 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/voipstack_agent -s <PBX SOCKET> -i <AGENT TOKEN>
+ExecStart=/usr/local/bin/voipstack_agent -i <AGENT TOKEN>
 Environment=LOG_LEVEL=info
+# chown voipstack_agent:voipstack_agent /etc/voipstack/private_key.pem
+Environment=VOIPSTACK_AGENT_PRIVATE_KEY_PEM_PATH=/etc/voipstack/private_key.pem
+# example asterisk: asterisk://amiuser:amipass@localhost:5038
+Environment=VOIPSTACK_AGENT_SOFTSWITCH_URL=fs://none:ClueCon@localhost:8021
 Restart=always
 RestartSec=15
-User=root
+# create user : useradd voipstack_agent
+User=voipstack_agent
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 [Install]

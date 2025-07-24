@@ -31,25 +31,13 @@ sudo mv voipstack_agent /usr/local/bin/
 
 ### Production
 
-For production deployment use systemd service unit. The file should be located at `/etc/systemd/system/voipstack_agent.service`:
+For production deployment use systemd service unit. The file should be located at `/etc/systemd/system/voipstack_agent.service`.
 
-```
-[Unit]
-Description=VOIPStack Agent Service
-After=network.target
-
-[Service]
-Type=simple
-ExecStart=/usr/local/bin/voipstack_agent -s "fs://none:pass@host" -i "token"
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Enable and start the service:
+[voipstack_agent.service](voipstack_agent.service)
 
 ```sh
+sudo useradd voipstack_agent
+sudo chown -R voipstack_agent:voipstack_agent /etc/voipstack
 sudo systemctl enable voipstack_agent
 sudo systemctl start voipstack_agent
 ```
