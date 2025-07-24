@@ -1,5 +1,5 @@
 name: agent
-version: 1.0.0
+version: 1.0.1
 
 authors:
   - Jovany Leandro G.C <bit4bit@riseup.net>
@@ -8,7 +8,7 @@ targets:
   voipstack_agent:
     main: src/cli.cr
 
-crystal: '>= 1.16'
+crystal: ">= 1.16"
 
 dependencies:
   crest:

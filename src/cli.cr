@@ -42,6 +42,17 @@ OptionParser.parse do |parser|
     puts "TIME: #{COMPILE_TIME}"
     exit 1
   }
+  parser.on("-g", "--generate-private-key PATH", "Generate Private Key") { |path|
+    pkey = OpenSSL::PKey::RSA.new(1024)
+    File.write(path, pkey.to_pem)
+
+    puts "Keys generated successfully"
+    puts "Private key saved to #{path}."
+    puts "Register the agent (admin.voipstack.io) using the following public key:"
+    puts pkey.public_key.to_pem
+    exit 0
+  }
+
   parser.on("-h", "--help", "Help") do
     puts parser
     exit 1
