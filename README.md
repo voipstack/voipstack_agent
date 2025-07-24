@@ -17,18 +17,6 @@ sudo mv voipstack_agent /usr/local/bin/
 
 ## Usage
 
-### FreeSWITCH
-
-```
-./voipstack_agent -s "fs://none:<PASS>@<IP>" -i "<TOKEN>"
-```
-
-### Asterisk
-
-```
-./voipstack_agent -s "asterisk://<AMI USER>:<AMI PASS>@<IP>" -i "<TOKEN>"
-```
-
 ### Production
 
 For production deployment use systemd service unit. The file should be located at `/etc/systemd/system/voipstack_agent.service`.
@@ -49,14 +37,18 @@ Step by step to run the agent:
 1. Generate the priv/pub keys in the same project:
 
 ```sh
-openssl genrsa -out ./agent.key 2048
-openssl rsa -pubout -in agent.key -out agent.pem
+./voipstack_agent --generate-private-key voipstack_agent.key
 ```
 
-2. Copy the agent.pem to the clipboard
-3. Go to the admin webpage, create or open a tenant and inside of some softswitch add the agent public key.
-4. Copy the token from the softswitch you added the agent public key
-5. Open a terminal and run `voipstack_agent -s fs://ClueCon:ClueCon@ip`
+2. Execute the agent:
+
+```sh
+VOIPSTACK_AGENT_PRIVATE_KEY_PEM_PATH=voipstack_agent.key ./voipstack_agent -s fs://ClueCon:ClueCon@ip
+```
+
+## Considerations
+
+- The application stops on presence of any error.
 
 ## Contributing
 

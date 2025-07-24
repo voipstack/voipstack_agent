@@ -10,6 +10,9 @@ Environment=LOG_LEVEL=info
 Environment=VOIPSTACK_AGENT_PRIVATE_KEY_PEM_PATH=/etc/voipstack/private_key.pem
 # example asterisk: asterisk://amiuser:amipass@localhost:5038
 Environment=VOIPSTACK_AGENT_SOFTSWITCH_URL=fs://none:ClueCon@localhost:8021
+# When there is not state consumption, the process will exit.
+# This avoid unnecessary billing.
+Environment=VOIPSTACK_AGENT_EXIT_ON_MINIMAL_MODE=true
 Restart=always
 RestartSec=15
 # create user : useradd voipstack_agent
