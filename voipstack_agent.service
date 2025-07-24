@@ -1,0 +1,15 @@
+[Unit]
+Description=VoIPStack Agent Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/voipstack_agent -s <PBX SOCKET> -i <AGENT TOKEN>
+Environment=LOG_LEVEL=info
+Restart=always
+RestartSec=15
+User=root
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+[Install]
+WantedBy=multi-user.target

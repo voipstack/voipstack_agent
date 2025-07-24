@@ -4,17 +4,62 @@
 
 ## Installation
 
-TODO: Write installation instructions here
+### Github releases
+
+1. Go to [releases page](https://github.com/voipstack/voipstack_agent/releases)
+2. Download the latest release for your platform
+3. Extract the downloaded archive
+4. Move the binary to a location in your PATH:
+
+```sh
+sudo mv voipstack_agent /usr/local/bin/
+```
 
 ## Usage
 
-`voipstack_agent -s "fs://ClueCon:<PASS>@<IP>" -i "<TOKEN>"`
+### FreeSWITCH
+
+```
+./voipstack_agent -s "fs://none:<PASS>@<IP>" -i "<TOKEN>"
+```
+
+### Asterisk
+
+```
+./voipstack_agent -s "asterisk://<AMI USER>:<AMI PASS>@<IP>" -i "<TOKEN>"
+```
+
+### Production
+
+For production deployment use systemd service unit. The file should be located at `/etc/systemd/system/voipstack_agent.service`:
+
+```
+[Unit]
+Description=VOIPStack Agent Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/voipstack_agent -s "fs://none:pass@host" -i "token"
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable and start the service:
+
+```sh
+sudo systemctl enable voipstack_agent
+sudo systemctl start voipstack_agent
+```
 
 ## Development
 
 Step by step to run the agent:
 
 1. Generate the priv/pub keys in the same project:
+
 ```sh
 openssl genrsa -out ./agent.key 2048
 openssl rsa -pubout -in agent.key -out agent.pem
