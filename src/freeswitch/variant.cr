@@ -28,7 +28,7 @@ module Agent
         puts "freeswitch: connected"
       end
     end
-
+    
     def bootstrap : Array(Agent::Event)
       next_events = [] of Agent::Event
 
@@ -179,34 +179,71 @@ module Agent
     end
   end
 
-  class FreeswitchStateVariantFusionPBX < SoftswitchState
-    # IDEAS
-    # freeswitch@9314505bc27a> lua ~loadstring("api=freeswitch.API();resp=api:executeString('uptime')")() stream:write(resp)
-
+  class FreeswitchStateVariantFusionPBX < FreeswitchStateVariantVanilla
     def initialize(@softswitch_id : String)
     end
 
-    def setup(config : Agent::Config, driver_config_path : String?)
+    def publish_list_users(next_events, conn, softswitch_id)
+      result = sql(conn, "select e.extension, d.domain_name from v_extensions as e inner join v_domains as d  on e.domain_uuid = d.domain_uuid")
+      data_users = Array(Hash(String, String)).new
+      result.each do |row|
+        data_users << {"name" => row["extension"], "id" => row["extension"], "domain" => row["domain_name"]}
+      end
+      next_events << publish_virtual_event(softswitch_id, "load_users", data_users.to_json)
     end
 
-    def bootstrap : Array(Agent::Event)
-      [] of Agent::Event
+    def publish_list_callcenter_agents(next_events, conn, softswitch_id)
+      query = %{select SPLIT_PART(a.agent_contact, '/', 2) as extension, a.call_center_agent_uuid as agent_uuid, d.domain_name, a.agent_contact from v_call_center_agents as a inner join v_domains as d  on a.domain_uuid = d.domain_uuid}
+      result = sql(conn, query)
+
+      data_users = Array(Hash(String, String)).new
+      result.each do |row|
+        data_users << {"name" => row["extension"], "id" => row["extension"], "domain" => row["domain_name"], "contact" => row["agent_contact"]}
+      end
+      next_events << publish_virtual_event(softswitch_id, "list_agents", {"response" => data_users}.to_json)
     end
 
-    def handle_action(action : Agent::Action) : Array(Agent::Event)
-      [] of Agent::Event
+    private def sql(conn, query : String) : Array(Hash(String, String))
+      cmd = %{
+     local database = require "resources.functions.database"
+     local dbh = database.new('system')
+     local json = require "resources.functions.lunajson"
+     local query = "#{query}"
+     local result = {}
+     assert(dbh:connected())
+     assert(dbh:query(query, function(row)
+       table.insert(result, row)
+     end))
+     dbh:release()
+     stream:write(json.encode(result))
+     }
+      res = conn.api("lua", "~loadstring(\"#{obfuscate(cmd)}\")()")
+
+      if res.starts_with?("-ERR")
+        raise "FreeswitchStateVariantFusionPBX SQL error: #{res}"
+      elsif res == "{}"
+        Array(Hash(String, String)).new
+      else
+        Array(Hash(String, String)).from_json(res)
+      end
     end
 
-    def next_platform_events : Array(Agent::Event)
-      [] of Agent::Event
-    end
+    private def obfuscate(script : String) : String
+      throw_away = [] of UInt8
 
-    def software : String
-      "freeswitch"
-    end
+      # Get bytes from the script string
+      script.each_byte do |byte|
+        throw_away << byte
+      end
 
-    def version : String
-      "1.10"
+      # Convert bytes to escaped string format
+      string_buffer = ""
+      throw_away.each do |byte|
+        string_buffer += "\\#{byte}"
+      end
+
+      # Return the obfuscated loadstring format
+      string_buffer
     end
   end
 end

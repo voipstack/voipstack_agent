@@ -151,7 +151,9 @@ end
 def find_softswitch_state(driver_config_path, schema : String, softswitch_id : String) : Agent::SoftswitchState
   case schema
   when "fs"
-    Agent::FreeswitchState.new(softswitch_id, driver_config_path)
+    Agent::FreeswitchStateVariantVanilla.new(softswitch_id)
+  when "fsfusionpbx"
+    Agent::FreeswitchStateVariantFusionPBX.new(softswitch_id)
   when "asterisk"
     Agent::AsteriskState.new(softswitch_id, driver_config_path)
   else

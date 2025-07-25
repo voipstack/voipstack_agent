@@ -9,6 +9,7 @@ Environment=LOG_LEVEL=info
 # chown voipstack_agent:voipstack_agent /etc/voipstack/private_key.pem
 Environment=VOIPSTACK_AGENT_PRIVATE_KEY_PEM_PATH=/etc/voipstack/private_key.pem
 # example asterisk: asterisk://amiuser:amipass@localhost:5038
+# example freeswitch fusion pbx: fsfusionpbx://none:ClueCon@localhost:8021
 Environment=VOIPSTACK_AGENT_SOFTSWITCH_URL=fs://none:ClueCon@localhost:8021
 # When there is not state consumption, the process will exit.
 # This avoid unnecessary billing.
