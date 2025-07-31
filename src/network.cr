@@ -1,5 +1,3 @@
-require "http/client/response"
-
 class Agent::Network::SIP(T)
   alias Headers = Hash(String, String)
   enum Status
@@ -18,6 +16,10 @@ class Agent::Network::SIP(T)
     def initialize(@method : String, @uri : String, @version = "SIP/2.0", @headers = Headers.new)
     end
 
+    def self.valid?(pieces)
+      pieces[2] == "SIP/2.0"
+    end
+
     def self.from_io(pieces, io : IO)
       SIP.parse_headers_and_body(io) do |headers, body|
         method = pieces[0]
@@ -34,6 +36,10 @@ class Agent::Network::SIP(T)
     def initialize(@status : Status, @status_code : Int32, @version = "SIP/2.0", @headers = Headers.new)
     end
 
+    def self.valid?(pieces)
+      pieces[0] == "SIP/2.0"
+    end
+
     def self.from_io(pieces, io : IO)
       SIP.parse_headers_and_body(io) do |headers, body|
         status_code = pieces[1].to_i?
@@ -45,6 +51,16 @@ class Agent::Network::SIP(T)
         new(status: Status.new(status_code), status_code: status_code, version: pieces[0], headers: headers)
       end
     end
+  end
+
+  def self.valid?(io : IO)
+    line = io.gets(4096, chomp: true)
+    raise SIPError.new("can't parse response") unless line
+
+    pieces = line.split(3)
+    raise SIPError.new("Invalid SIP response") unless pieces.size == 3
+
+    T.valid?(pieces)
   end
 
   def self.parse(io : IO) : T
