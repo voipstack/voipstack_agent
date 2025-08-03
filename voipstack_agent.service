@@ -10,6 +10,7 @@ Environment=LOG_LEVEL=info
 Environment=VOIPSTACK_AGENT_PRIVATE_KEY_PEM_PATH=/etc/voipstack/private_key.pem
 # example asterisk: asterisk://amiuser:amipass@localhost:5038
 # example freeswitch fusion pbx: fsfusionpbx://none:ClueCon@localhost:8021
+# example HEPv3 any SIP Platform: generic+udp+hepv3://localhost:9060
 Environment=VOIPSTACK_AGENT_SOFTSWITCH_URL=fs://none:ClueCon@localhost:8021
 # When there is not state consumption, the process will exit.
 # This avoid unnecessary billing.
