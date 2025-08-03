@@ -74,6 +74,16 @@ module Agent
           "source_ref"  => sip_req.headers["Contact"],
           "destination" => sip_req.headers["To"],
         }, next_events)
+      when "REGISTER"
+        if sip_req.headers["Expires"] == "0"
+          publish_event("generic.unregister", {
+            "sip_H-Contact" => sip_req.headers["Contact"],
+          }, next_events)
+        else
+          publish_event("generic.register", {
+            "sip_H-Contact" => sip_req.headers["Contact"],
+          }, next_events)
+        end
       when "BYE"
         publish_event("generic.call_state", {
           "call_uuid" => sip_req.headers["Call-ID"],
