@@ -17,6 +17,10 @@ dependencies:
     github: bit4bit/freeswitch-esl.cr
   asterisk-ami:
     github: bit4bit/asterisk-ami.cr
+  hep:
+    github: bit4bit/hep.cr
+  sip_utils:
+    github: bit4bit/sip_utils.cr
   openssl_ext:
     github: voipstack/openssl_ext
     license: MIT

@@ -28,7 +28,7 @@ module Agent
         puts "freeswitch: connected"
       end
     end
-    
+
     def bootstrap : Array(Agent::Event)
       next_events = [] of Agent::Event
 

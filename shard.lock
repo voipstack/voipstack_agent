@@ -12,6 +12,10 @@ shards:
     git: https://github.com/bit4bit/freeswitch-esl.cr.git
     version: 1.0.2
 
+  hep:
+    git: https://github.com/bit4bit/hep.cr.git
+    version: 0.1.0+git.commit.111a74e99c02ed34df9d90251991464905282ca5
+
   http-client-digest_auth:
     git: https://github.com/mamantoha/http-client-digest_auth.git
     version: 0.6.0
@@ -27,4 +31,8 @@ shards:
   phoenixchannels:
     git: https://github.com/bit4bit/phoenixchannels.cr.git
     version: 0.1.0+git.commit.f9eb27b25a8be3781226cf380e876f5a05eb5f32
+
+  sip_utils:
+    git: https://github.com/bit4bit/sip_utils.cr.git
+    version: 0.1.0+git.commit.b337fac0adb1752be5a04d994c8bab17c4f7ef95
 

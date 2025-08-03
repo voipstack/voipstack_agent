@@ -67,12 +67,15 @@ crypto = Agent::NativeOpenSSL.new(private_key_pem_path: private_key_pem_path)
 http_client = Agent::HTTPClient.new(crypto: crypto)
 
 softswitch : Agent::SoftswitchState = find_softswitch_state(softswitch_config_path, config.softswitch.scheme.not_nil!, softswitch_id.not_nil!)
-
+Log.debug { "SOFTSWITCH STATE CREATED" }
 web_handler = Agent::WebHandler.new(softswitch: softswitch.software, softswitch_id: softswitch_id.not_nil!, http_client: http_client, timeout: 1.second)
-
+Log.debug { "WEB HANDLER CREATED" }
 flusher = Agent::PhoenixWebsocketFlusher.new(url: event_url, softswitch_id: softswitch_id.not_nil!, softswitch: softswitch.software, crypto: crypto)
+Log.debug { "FLUSHER CREATED" }
 main_collector = Agent::Collector.new(block_size: block_size, timeout: collector_timeout.seconds, flusher: flusher, limit_queue: collector_limit_queue)
+Log.debug { "MAIN COLLECTOR CREATED" }
 collector = Agent::CollectorOnDemand.new(collector: main_collector)
+Log.debug { "COLLECTOR ON DEMAND CREATED" }
 
 if action_url.empty?
   action_url = base_action_url + "/#{softswitch.software}/#{softswitch.version}"
@@ -156,6 +159,8 @@ def find_softswitch_state(driver_config_path, schema : String, softswitch_id : S
     Agent::FreeswitchStateVariantFusionPBX.new(softswitch_id)
   when "asterisk"
     Agent::AsteriskState.new(softswitch_id, driver_config_path)
+  when "generic+udp+hepv3"
+    Agent::UDPGenericHEPv3State.new(softswitch_id, driver_config_path)
   else
     raise "unknown how to handle softswitch of kind #{schema}"
   end
