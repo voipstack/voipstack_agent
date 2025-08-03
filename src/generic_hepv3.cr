@@ -93,13 +93,13 @@ module Agent
 
     private def publish_event(name, response, next_events : Array(Agent::Event))
       payload = Agent::Payload.new(payload: {
-        "Event"                => "VIRTUAL",
+        "Event-Name"           => "VIRTUAL",
         "Event-Date-Timestamp" => Time.utc.to_unix_ms.to_s,
         "Virtual-Name"         => name,
       }.merge(response).to_json)
 
       next_events << Agent::Event.new(
-        softswitch: "generic+hepv3",
+        softswitch: software,
         softswitch_id: @softswitch_id.not_nil!,
         timestamp: Time.utc,
         encoding: "json",
