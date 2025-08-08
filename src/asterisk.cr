@@ -76,7 +76,16 @@ module Agent
     end
 
     def handle_action(action : Agent::Action) : Array(Agent::Event)
-      Array(Agent::Event).new
+      next_events = [] of Agent::Event
+
+      case action.action
+      when "heartbeat"
+        heartbeat(next_events)
+      else
+        execute_action_as_dialplan(action, "action", "voipstack")
+      end
+
+      next_events
     end
 
     def next_platform_events : Array(Agent::Event)
@@ -100,6 +109,28 @@ module Agent
 
     private def conn
       @conn.not_nil!
+    end
+
+    private def execute_action_as_dialplan(action, destination_number, destination_context)
+      variables = action.arguments.map { |k, v| ["voipstack_action_input_#{k}", v] }.to_h
+      variables["voipstack_action"] = action.action
+
+      conn.request(Asterisk::Action.new(
+        "Originate", UUID.v4.hexstring,
+        header: {
+          "Context"  => destination_context,
+          "Exten"    => destination_number,
+          "Priority" => "1",
+          "Channel"  => "Local/#{destination_number}@#{destination_context}",
+          "CallerID" => "voipstack-action",
+        },
+        variables: variables
+      )).tap do |response|
+        Log.debug { "ASTERISK RESPONSE: #{response.inspect}" }
+      end
+    end
+
+    private def heartbeat(next_event)
     end
 
     private def publish_list_chan_sip_endpoints(next_events)
