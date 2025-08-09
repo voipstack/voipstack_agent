@@ -1,0 +1,8 @@
+executor:
+  hangup_asterisk:
+    type: softswitch-interface
+    when:
+      action: hangup
+    command: Hangup
+    interface:
+      Channel: ${VOIPSTACK_ACTION_VENDOR_CHANNEL}
