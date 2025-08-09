@@ -7,8 +7,9 @@ class TestHandler < Agent::Executor::Handler
     @called = ""
   end
 
-  def handle_action(action : Agent::Action)
+  def handle_action(action : Agent::Action) : Agent::Events
     @called = action.action
+    Agent::Events.new
   end
 end
 
