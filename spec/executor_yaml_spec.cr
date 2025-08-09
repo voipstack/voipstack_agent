@@ -12,7 +12,9 @@ describe Agent::ExecutorYaml do
         command: "echo test_output"
     YAML
 
-    executor = Agent::ExecutorYaml.from_yaml(yaml_content)
+    executor = Agent::ExecutorYaml.from_yaml(yaml_content) do |action_config|
+      raise "Invalid action configuration"
+    end
 
     action = Agent::Action.new(
       id: "123",
@@ -38,7 +40,9 @@ describe Agent::ExecutorYaml do
         command: "echo ${VOIPSTACK_ACTION_INPUT_INPUT}"
     YAML
 
-    executor = Agent::ExecutorYaml.from_yaml(yaml_content)
+    executor = Agent::ExecutorYaml.from_yaml(yaml_content) do |action_config|
+      raise "Invalid action configuration"
+    end
 
     arguments = Agent::ActionArgument.new
     arguments["input"] = "hello_world"
@@ -73,7 +77,9 @@ describe Agent::ExecutorYaml do
         command: "echo another"
     YAML
 
-    executor = Agent::ExecutorYaml.from_yaml(yaml_content)
+    executor = Agent::ExecutorYaml.from_yaml(yaml_content) do |action_config|
+      raise "Invalid action configuration"
+    end
 
     test_action = Agent::Action.new(
       id: "1",
@@ -109,7 +115,9 @@ describe Agent::ExecutorYaml do
     YAML
 
     expect_raises(Exception, "Unknown action type: unknown") do
-      Agent::ExecutorYaml.from_yaml(yaml_content)
+      executor = Agent::ExecutorYaml.from_yaml(yaml_content) do |action_config|
+        raise "Unknown action type: #{action_config.type}"
+      end
     end
   end
 
@@ -124,7 +132,9 @@ describe Agent::ExecutorYaml do
     YAML
 
     expect_raises(Exception, "Shell action requires command") do
-      Agent::ExecutorYaml.from_yaml(yaml_content)
+      executor = Agent::ExecutorYaml.from_yaml(yaml_content) do |action_config|
+        raise "Invalid action configuration"
+      end
     end
   end
 
@@ -139,7 +149,9 @@ describe Agent::ExecutorYaml do
         command: "echo test"
     YAML
 
-    executor = Agent::ExecutorYaml.from_yaml(yaml_content)
+    executor = Agent::ExecutorYaml.from_yaml(yaml_content) do |action_config|
+      raise "Invalid action configuration"
+    end
 
     action = Agent::Action.new(
       id: "123",

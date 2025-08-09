@@ -21,7 +21,11 @@ exit_on_minimal_mode = false || ENV["VOIPSTACK_AGENT_EXIT_ON_MINIMAL_MODE"] == "
 collector_limit_queue = ENV["VOIPSTACK_AGENT_COLLECTOR_LIMIT_QUEUE"].to_i
 softswitch_id = nil
 softswitch_url = ENV["VOIPSTACK_AGENT_SOFTSWITCH_URL"]
-softswitch_config_path = ENV["VOIPSTACK_AGENT_SOFTSWITCH_CONFIG_PATH"]
+softswitch_config_path = if ENV.has_key?("VOIPSTACK_AGENT_SOFTSWITCH_CONFIG_PATH")
+                           ENV["VOIPSTACK_AGENT_SOFTSWITCH_CONFIG_PATH"]
+                         else
+                           nil
+                         end
 base_action_url = "https://endpoint.voipstack.io"
 block_size = 128
 
@@ -65,15 +69,6 @@ config = Agent::Config.new
 config.softswitch_url = softswitch_url
 
 executor = Agent::Executor.new
-if softswitch_config_path
-  begin
-    yaml_content = File.read(softswitch_config_path.not_nil!)
-    executor = Agent::ExecutorYaml.from_yaml(yaml_content)
-  rescue e
-    Log.error { "Failed to parse YAML config: #{e}" }
-    exit 1
-  end
-end
 
 crypto = Agent::NativeOpenSSL.new(private_key_pem_path: private_key_pem_path)
 http_client = Agent::HTTPClient.new(crypto: crypto)
@@ -90,6 +85,24 @@ collector = Agent::CollectorOnDemand.new(collector: main_collector)
 Log.debug { "COLLECTOR ON DEMAND CREATED" }
 
 # default execute softswitch or http post
+if softswitch_config_path
+  begin
+    yaml_content = File.read(softswitch_config_path.not_nil!)
+    executor = Agent::ExecutorYaml.from_yaml(yaml_content) do |action_config|
+      case action_config.type
+      when "softswitch-interface"
+        raise "softswitch-interface requires interface" unless action_config.interface
+        raise "softswitch-interface requires command" unless action_config.command
+        Agent::Executor::SoftswitchInterfaceHandler.new(softswitch: softswitch, command: action_config.command.not_nil!, interface: action_config.interface.not_nil!)
+      else
+        raise "Unknown action type: #{action_config.type}"
+      end
+    end
+  rescue e
+    Log.error { "Failed to parse YAML config: #{e}" }
+    exit 1
+  end
+end
 match_softswitch = Agent::ActionMatch.new
 match_softswitch["handler"] = "dial"
 executor.when(match_softswitch, Agent::Executor::ProxySoftswitchStateHandler.new(softswitch: softswitch))

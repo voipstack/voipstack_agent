@@ -75,6 +75,19 @@ module Agent
       next_events
     end
 
+    def interface_command(command : String, input : Hash(String, String)) : Array(Agent::Event)
+      next_events = [] of Agent::Event
+
+      resp = conn.request(Asterisk::Action.new(
+        command,
+        UUID.v4.hexstring,
+        header: input
+      ))
+      Log.debug { "[ASTERISK] interface_command response: #{resp.inspect}" }
+
+      next_events
+    end
+
     def handle_action(action : Agent::Action) : Array(Agent::Event)
       next_events = [] of Agent::Event
 

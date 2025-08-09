@@ -1,4 +1,11 @@
 executor:
+  hangup_asterisk:
+    type: softswitch-interface
+    when:
+      action: hangup
+    command: Hangup
+    interface:
+      Uniqueid: ${VOIPSTACK_ACTION_INPUT_CALL_UUID}
   test_action:
     type: shell
     when:

@@ -41,6 +41,25 @@ class Agent::Executor
     end
   end
 
+  class SoftswitchInterfaceHandler < Handler
+    def initialize(@softswitch : Agent::SoftswitchState, @command : String, @interface : Hash(String, String))
+    end
+
+    def handle_action(action : Agent::Action) : Array(Agent::Event)
+      interpolated_interface = @interface.clone
+      action.arguments.each do |key, value|
+        interpolated_interface.keys.each do |interface_key|
+          key = "VOIPSTACK_ACTION_INPUT_#{key.chomp.upcase}"
+          if interpolated_interface[interface_key].includes? "${#{key}}"
+            interpolated_interface[interface_key] = interpolated_interface[interface_key].gsub("${#{key}}", value)
+          end
+        end
+      end
+
+      @softswitch.interface_command(@command, interpolated_interface)
+    end
+  end
+
   class ShellHandler < Handler
     def initialize(@command : String)
     end
@@ -105,6 +124,7 @@ module Agent::ExecutorYaml
     property type : String
     property when : Hash(String, String | Hash(String, String))
     property command : String?
+    property interface : Hash(String, String)?
   end
 
   struct ExecutorConfig
@@ -113,7 +133,7 @@ module Agent::ExecutorYaml
     property executor : Hash(String, ActionConfig)
   end
 
-  def self.from_yaml(yaml_content : String) : Agent::Executor
+  def self.from_yaml(yaml_content : String, &) : Agent::Executor
     config = ExecutorConfig.from_yaml(yaml_content)
     executor = Agent::Executor.new
 
@@ -125,7 +145,7 @@ module Agent::ExecutorYaml
                   raise "Shell action requires command" unless command
                   Agent::Executor::ShellHandler.new(command)
                 else
-                  raise "Unknown action type: #{action_config.type}"
+                  yield action_config
                 end
 
       executor.when(action_config.when, handler)

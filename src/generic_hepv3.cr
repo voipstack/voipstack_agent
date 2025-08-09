@@ -42,6 +42,11 @@ module Agent
       Array(Agent::Event).new
     end
 
+    def interface_command(command : String, input : Hash(String, String)) : Array(Agent::Event)
+      next_events = [] of Agent::Event
+      next_events
+    end
+
     def handle_action(action : Agent::Action) : Array(Agent::Event)
       Array(Agent::Event).new
     end

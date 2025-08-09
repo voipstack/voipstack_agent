@@ -325,6 +325,7 @@ module Agent
   abstract class SoftswitchState
     abstract def setup(config : Agent::Config, driver_config_path : String?)
     abstract def bootstrap : Array(Agent::Event)
+    abstract def interface_command(command : String, input : Hash(String, String)) : Array(Agent::Event)
     abstract def handle_action(action : Agent::Action) : Array(Agent::Event)
     abstract def next_platform_events : Array(Agent::Event)
     abstract def software : String

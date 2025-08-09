@@ -47,6 +47,13 @@ module Agent
       next_events
     end
 
+    def interface_command(command : String, input : Hash(String, String)) : Array(Agent::Event)
+      next_events = [] of Agent::Event
+      conn.conn.sendmsg(UUID.v4.hexstring, command, input, "")
+
+      next_events
+    end
+
     def handle_action(action : Agent::Action) : Array(Agent::Event)
       next_events = [] of Agent::Event
 
