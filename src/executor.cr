@@ -48,15 +48,25 @@ class Agent::Executor
     def handle_action(action : Agent::Action) : Array(Agent::Event)
       interpolated_interface = @interface.clone
       action.arguments.each do |key, value|
-        interpolated_interface.keys.each do |interface_key|
-          key = "VOIPSTACK_ACTION_INPUT_#{key.chomp.upcase}"
-          if interpolated_interface[interface_key].includes? "${#{key}}"
-            interpolated_interface[interface_key] = interpolated_interface[interface_key].gsub("${#{key}}", value)
-          end
-        end
+        expand_variables("VOIPSTACK_ACTION_INPUT_", key, value, interpolated_interface)
       end
 
+      action.vendor.each do |key, value|
+        expand_variables("VOIPSTACK_ACTION_VENDOR_", key, value, interpolated_interface)
+      end
+
+      Log.debug { "[EXECUTOR] SOFTSWITCH INTERFACE COMMAND: #{interpolated_interface.inspect}" }
+
       @softswitch.interface_command(@command, interpolated_interface)
+    end
+
+    private def expand_variables(prefix, key, value, variables : Hash(String, String))
+      variables.keys.each do |interface_key|
+        key = "#{prefix}#{key.chomp.upcase}"
+        if variables[interface_key].includes? "${#{key}}"
+          variables[interface_key] = variables[interface_key].gsub("${#{key}}", value)
+        end
+      end
     end
   end
 

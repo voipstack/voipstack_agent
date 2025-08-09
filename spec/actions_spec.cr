@@ -78,7 +78,7 @@ describe Agent::ActionRunner do
   end
 
   it "POST to server" do
-    http_mock = http_expect_once %({"data":{"actions":[{"app_id":"appid","id":"123","previous_id":null,"action":"heartbeat","handler":"dial","handler_arguments":{},"arguments":{}}]}})
+    http_mock = http_expect_once %({"data":{"actions":[{"app_id":"appid","id":"123","previous_id":null,"action":"heartbeat","handler":"dial","handler_arguments":{},"arguments":{},"vendor":{}}]}})
     http_client = Agent::HTTPClient.new(crypto)
     getter = Agent::ActionHTTPGetter.new("http://localhost:8080", "123", http_client: http_client)
     runner = Agent::ActionRunner.new(getter: getter)

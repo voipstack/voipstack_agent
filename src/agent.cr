@@ -231,13 +231,14 @@ module Agent
     end
   end
 
+  alias ActionVendor = Hash(String, String)
   alias ActionArgument = Hash(String, String)
   alias ActionMatch = Hash(String, String | Hash(String, String))
 
   struct Action
-    getter :id, :app_id, :previous_id, :action, :arguments, :handler_arguments
+    getter :id, :app_id, :previous_id, :action, :arguments, :handler_arguments, :vendor
 
-    def initialize(@app_id : String, @id : String, @action : String, @arguments : ActionArgument, @handler : String, @handler_arguments : ActionArgument, @previous_id : String? = nil)
+    def initialize(@app_id : String, @id : String, @action : String, @arguments : ActionArgument, @handler : String, @handler_arguments : ActionArgument, @previous_id : String? = nil, @vendor = ActionVendor.new)
       @easy_match = {
         "app_id"            => @app_id,
         "id"                => @id,
@@ -246,6 +247,7 @@ module Agent
         "previous_id"       => @previous_id,
         "arguments"         => @arguments.to_h,
         "handler_arguments" => @handler_arguments.to_h,
+        "vendor"            => @vendor.to_h,
       }
     end
 
@@ -309,6 +311,10 @@ module Agent
         action_data["handler_arguments"].as_h.not_nil!.each do |k, v|
           handler_arguments[k] = v.as_s? || ""
         end
+        vendor = ActionVendor.new
+        action_data["vendor"].as_h.not_nil!.each do |k, v|
+          vendor[k] = v.as_s? || ""
+        end
 
         Action.new(
           app_id: action_data["app_id"].as_s.not_nil!,
@@ -317,7 +323,8 @@ module Agent
           action: action_data["action"].as_s.not_nil!,
           arguments: arguments,
           handler: action_data["handler"].as_s.not_nil!,
-          handler_arguments: handler_arguments)
+          handler_arguments: handler_arguments,
+          vendor: vendor)
       end
     end
   end

@@ -5,7 +5,7 @@ executor:
       action: hangup
     command: Hangup
     interface:
-      Uniqueid: ${VOIPSTACK_ACTION_INPUT_CALL_UUID}
+      Channel: ${VOIPSTACK_ACTION_VENDOR_CHANNEL}
   test_action:
     type: shell
     when:
