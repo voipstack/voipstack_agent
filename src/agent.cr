@@ -232,15 +232,37 @@ module Agent
   end
 
   alias ActionArgument = Hash(String, String)
+  alias ActionMatch = Hash(String, String | Hash(String, String))
 
   struct Action
     getter :id, :app_id, :previous_id, :action, :arguments, :handler_arguments
 
     def initialize(@app_id : String, @id : String, @action : String, @arguments : ActionArgument, @handler : String, @handler_arguments : ActionArgument, @previous_id : String? = nil)
+      @easy_match = {
+        "app_id"            => @app_id,
+        "id"                => @id,
+        "action"            => @action,
+        "handler"           => @handler,
+        "previous_id"       => @previous_id,
+        "arguments"         => @arguments.to_h,
+        "handler_arguments" => @handler_arguments.to_h,
+      }
     end
 
     def dial?
       @handler == "dial"
+    end
+
+    def match?(match : ActionMatch)
+      match.all? do |key, value|
+        if value.is_a?(Hash)
+          value.all? { |sub_key, sub_value|
+            @easy_match.has_key?(key) && @easy_match[key].not_nil!.[sub_key] == sub_value
+          }
+        else
+          @easy_match[key] == value
+        end
+      end
     end
 
     def http_post?
@@ -341,6 +363,7 @@ module Agent
   end
 end
 
+require "./executor"
 require "./freeswitch"
 require "./asterisk"
 require "./crypto"
