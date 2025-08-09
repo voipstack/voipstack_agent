@@ -249,10 +249,6 @@ module Agent
       }
     end
 
-    def dial?
-      @handler == "dial"
-    end
-
     def match?(match : ActionMatch)
       match.all? do |key, value|
         if value.is_a?(Hash)
@@ -263,10 +259,6 @@ module Agent
           @easy_match[key] == value
         end
       end
-    end
-
-    def http_post?
-      @handler == "http_post"
     end
   end
 
@@ -364,6 +356,7 @@ module Agent
 end
 
 require "./executor"
+
 require "./freeswitch"
 require "./asterisk"
 require "./crypto"

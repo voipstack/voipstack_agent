@@ -6,6 +6,8 @@ After=network.target
 Type=simple
 ExecStart=/usr/local/bin/voipstack_agent -i <AGENT TOKEN>
 Environment=LOG_LEVEL=info
+# See examples/
+# Environment=VOIPSTACK_AGENT_SOFTSWITCH_CONFIG_PATH=/etc/voipstack/voipstack.yml
 # chown voipstack_agent:voipstack_agent /etc/voipstack/private_key.pem
 Environment=VOIPSTACK_AGENT_PRIVATE_KEY_PEM_PATH=/etc/voipstack/private_key.pem
 # example asterisk: asterisk://amiuser:amipass@localhost:5038

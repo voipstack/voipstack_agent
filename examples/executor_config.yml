@@ -1,0 +1,32 @@
+executor:
+  test_action:
+    type: shell
+    when:
+      action: test
+      handler: dial
+    command: "echo ${VOIPSTACK_ACTION_INPUT_CALL_UUID}"
+  heartbeat_action:
+    type: shell
+    when:
+      action: heartbeat
+    command: "echo 'Heartbeat received at' $(date)"
+  call_action:
+    type: shell
+    when:
+      action: call
+      handler: dial
+    command: "echo 'Calling ${VOIPSTACK_ACTION_INPUT_NUMBER} from ${VOIPSTACK_ACTION_INPUT_CALLER_ID}'"
+  hangup_action:
+    type: shell
+    when:
+      action: hangup
+      handler: call_control
+    command: "echo 'Hanging up call ${VOIPSTACK_ACTION_INPUT_CALL_ID}'"
+  conditional_action:
+    type: shell
+    when:
+      action: process
+      handler: data
+      arguments:
+        type: important
+    command: "priority_processor.sh ${VOIPSTACK_ACTION_INPUT_DATA}"

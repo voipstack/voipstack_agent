@@ -15,12 +15,13 @@ ENV["VOIPSTACK_AGENT_PRIVATE_KEY_PEM_PATH"] ||= "agent.key"
 ENV["VOIPSTACK_AGENT_EXIT_ON_MINIMAL_MODE"] ||= "false"
 ENV["VOIPSTACK_AGENT_COLLECTOR_LIMIT_QUEUE"] ||= (1024*1024).to_s
 ENV["VOIPSTACK_AGENT_COLLECTOR_TICK_SECONDS"] ||= "2"
+ENV["VOIPSTACK_AGENT_SOFTSWITCH_CONFIG_PATH"] ||= nil
 
 exit_on_minimal_mode = false || ENV["VOIPSTACK_AGENT_EXIT_ON_MINIMAL_MODE"] == "true"
 collector_limit_queue = ENV["VOIPSTACK_AGENT_COLLECTOR_LIMIT_QUEUE"].to_i
 softswitch_id = nil
 softswitch_url = ENV["VOIPSTACK_AGENT_SOFTSWITCH_URL"]
-softswitch_config_path = nil
+softswitch_config_path = ENV["VOIPSTACK_AGENT_SOFTSWITCH_CONFIG_PATH"]
 base_action_url = "https://endpoint.voipstack.io"
 block_size = 128
 
@@ -63,6 +64,17 @@ end
 config = Agent::Config.new
 config.softswitch_url = softswitch_url
 
+executor = Agent::Executor.new
+if softswitch_config_path
+  begin
+    yaml_content = File.read(softswitch_config_path.not_nil!)
+    executor = Agent::ExecutorYaml.from_yaml(yaml_content)
+  rescue e
+    Log.error { "Failed to parse YAML config: #{e}" }
+    exit 1
+  end
+end
+
 crypto = Agent::NativeOpenSSL.new(private_key_pem_path: private_key_pem_path)
 http_client = Agent::HTTPClient.new(crypto: crypto)
 
@@ -76,6 +88,14 @@ main_collector = Agent::Collector.new(block_size: block_size, timeout: collector
 Log.debug { "MAIN COLLECTOR CREATED" }
 collector = Agent::CollectorOnDemand.new(collector: main_collector)
 Log.debug { "COLLECTOR ON DEMAND CREATED" }
+
+# default execute softswitch or http post
+match_softswitch = Agent::ActionMatch.new
+match_softswitch["handler"] = "dial"
+executor.when(match_softswitch, Agent::Executor::ProxySoftswitchStateHandler.new(softswitch: softswitch))
+match_http_post = Agent::ActionMatch.new
+match_http_post["handler"] = "http_post"
+executor.when(match_http_post, Agent::Executor::ProxyHTTPPostHandler.new(handler: web_handler))
 
 if action_url.empty?
   action_url = base_action_url + "/#{softswitch.software}/#{softswitch.version}"
@@ -124,14 +144,8 @@ spawn do
         latest_heartbeat = Time.utc
       end
 
-      if action.dial?
-        softswitch.handle_action(action).each do |event|
-          collector.push(event)
-        end
-      elsif action.http_post?
-        web_handler.handle_action(action).each do |event|
-          collector.push(event)
-        end
+      executor.execute(action).each do |event|
+        collector.push(event)
       end
     end
 
