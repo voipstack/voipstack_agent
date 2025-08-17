@@ -49,7 +49,15 @@ module Agent
 
     def interface_command(command : String, input : Hash(String, String)) : Array(Agent::Event)
       next_events = [] of Agent::Event
-      conn.conn.sendmsg(UUID.v4.hexstring, command, input, "")
+
+      case command
+      when "api"
+        args = input.map { |key, value| "#{key} #{value}" }.join(" ")
+        resp = conn.api(args)
+        Log.debug { "[EXECUTOR][FREESWITCH] API command executed: #{command} with args: #{args} -> #{resp}" }
+      else
+        conn.conn.sendmsg(UUID.v4.hexstring, command, input, "")
+      end
 
       next_events
     end
