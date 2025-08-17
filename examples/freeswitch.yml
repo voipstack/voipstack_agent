@@ -1,0 +1,8 @@
+executor:
+  listen:
+    type: softswitch-interface
+    when:
+      action: listen
+    command: api
+    interface:
+      originate: "user/${VOIPSTACK_ACTION_INPUT_OPERATOR_EXTENSION} &eavesdrop(${VOIPSTACK_ACTION_INPUT_CALL_UUID})"
