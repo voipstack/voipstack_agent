@@ -1,22 +1,37 @@
 require "yaml"
 
 class Agent::Executor
+  class Options
+    def initialize
+      @skip = false
+    end
+
+    def skip(value)
+      @skip = value
+      self
+    end
+
+    def skip?
+      @skip
+    end
+  end
+
   abstract class Handler
     abstract def handle_action(action : Agent::Action) : Array(Agent::Event)
   end
 
   def initialize
-    @handlers = Array(Tuple(Agent::ActionMatch, Handler)).new
+    @handlers = Array(Tuple(Agent::ActionMatch, Handler, Options)).new
   end
 
-  def when(match : Agent::ActionMatch, handler : Agent::Executor::Handler)
-    @handlers << {match, handler}
+  def when(match : Agent::ActionMatch, handler : Agent::Executor::Handler, opts : Agent::Executor::Options = Agent::Executor::Options.new)
+    @handlers << {match, handler, opts}
   end
 
   def execute(action : Agent::Action) : Array(Agent::Event)
     next_events = Array(Agent::Event).new
-    @handlers.each do |match, handler|
-      if action.match?(match)
+    @handlers.each do |match, handler, opts|
+      if action.match?(match) && !opts.skip?
         next_events.concat(handler.handle_action(action))
       end
     end
@@ -135,6 +150,7 @@ module Agent::ExecutorYaml
     property when : Hash(String, String | Hash(String, String))
     property command : String?
     property interface : Hash(String, String)?
+    property skip : Bool? = false
   end
 
   struct ExecutorConfig

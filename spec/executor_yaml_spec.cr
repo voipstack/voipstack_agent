@@ -165,4 +165,33 @@ describe Agent::ExecutorYaml do
     events = executor.execute(action)
     events.size.should eq 0
   end
+
+  it "does not execute action when skip" do
+    yaml_content = <<-YAML
+    executor:
+      action:
+        type: shell
+        skip: true
+        when:
+          action: test
+          handler: dial
+        command: "echo test"
+    YAML
+
+    executor = Agent::ExecutorYaml.from_yaml(yaml_content) do |action_config|
+      raise "Invalid action configuration"
+    end
+
+    action = Agent::Action.new(
+      id: "123",
+      app_id: "test",
+      action: "test",
+      handler: "dial",
+      arguments: Agent::ActionArgument.new,
+      handler_arguments: Agent::ActionArgument.new
+    )
+
+    events = executor.execute(action)
+    events.size.should eq 0
+  end
 end

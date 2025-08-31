@@ -12,7 +12,7 @@ Log.setup_from_env(default_level: Log::Severity::Info)
 
 ENV["VOIPSTACK_AGENT_SOFTSWITCH_URL"] ||= ""
 ENV["VOIPSTACK_AGENT_PRIVATE_KEY_PEM_PATH"] ||= "voipstack_agent.key"
-ENV["VOIPSTACK_AGENT_EXIT_ON_MINIMAL_MODE"] ||= "false"
+ENV["VOIPSTACK_AGENT_EXIT_ON_MINIMAL_MODE"] ||= "true"
 ENV["VOIPSTACK_AGENT_COLLECTOR_LIMIT_QUEUE"] ||= (1024*1024).to_s
 ENV["VOIPSTACK_AGENT_COLLECTOR_TICK_SECONDS"] ||= "2"
 ENV["VOIPSTACK_AGENT_SOFTSWITCH_CONFIG_PATH"] ||= nil
@@ -144,6 +144,10 @@ spawn name: "minimal mode" do
     elsif minimal_mode == true && span.total_seconds < config.minimal_timeout
       minimal_mode = false
       collector.enable
+      # resync pbx state
+      softswitch.bootstrap.each do |event|
+        collector.push(event)
+      end
       Log.info { "AGENT DISABLED MINIMAL MODE" }
     end
     sleep 5.seconds

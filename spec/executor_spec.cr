@@ -117,4 +117,26 @@ describe Agent::Executor do
     executor.execute(action)
     test_handler.called.should eq ""
   end
+
+  it "does not execute action when skip" do
+    test_handler = TestHandler.new
+    executor = Agent::Executor.new
+    action = Agent::Action.new(
+      id: "123",
+      app_id: "test",
+      action: "test",
+      handler: "dial",
+      arguments: Agent::ActionArgument.new,
+      handler_arguments: Agent::ActionArgument.new
+    )
+    match = Agent::ActionMatch.new
+    match["handler"] = "dial"
+    match["action"] = "test"
+    opts = Agent::Executor::Options.new.skip(true)
+    executor.when(match, test_handler, opts)
+
+    executor.execute(action)
+
+    test_handler.called.should eq ""
+  end
 end
