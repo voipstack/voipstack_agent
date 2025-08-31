@@ -32,6 +32,8 @@ module Agent
     def bootstrap : Array(Agent::Event)
       next_events = [] of Agent::Event
 
+      publish_mapping(next_events, conn, @softswitch_id)
+
       # order is important don't change
       # first synchronization
       publish_list_users(next_events, conn, @softswitch_id)
@@ -185,6 +187,9 @@ module Agent
       )
     end
 
+    def publish_mapping(next_events, conn, softswitch_id)
+    end
+
     private def events
       @events.not_nil!
     end
@@ -196,6 +201,19 @@ module Agent
 
   class FreeswitchStateVariantFusionPBX < FreeswitchStateVariantVanilla
     def initialize(@softswitch_id : String)
+    end
+
+    def publish_mapping(next_events, conn, softswitch_id)
+      query = %{select SPLIT_PART(a.agent_contact, '/', 2) as agent, a.call_center_agent_uuid as agent_uuid, q.call_center_queue_uuid as queue_uuid, q.queue_extension || '@' || d.domain_name as queue,  d.domain_name from v_call_center_tiers as t left join v_call_center_agents as a on t.call_center_agent_uuid = a.call_center_agent_uuid left join v_call_center_queues as q on q.call_center_queue_uuid = t.call_center_queue_uuid inner join v_domains as d on t.domain_uuid = d.domain_uuid}
+      result = sql(conn, query)
+
+      data = Array(Hash(String, String)).new
+      result.each do |row|
+        data << {"entity" => "callcenter_agent", "source" => row["agent_uuid"], "ref" => row["agent"]}
+        data << {"entity" => "callcenter_queue", "source" => row["queue_uuid"], "ref" => row["queue"]}
+      end
+
+      next_events << publish_virtual_event(softswitch_id, "mapping", data.to_json)
     end
 
     def publish_list_users(next_events, conn, softswitch_id)
@@ -226,7 +244,6 @@ module Agent
       result.each do |row|
         data << {"agent" => row["agent"], "queue" => row["queue"], "domain" => row["domain_name"], "state" => "Ready"}
       end
-
       next_events << publish_virtual_event(softswitch_id, "list_tiers", {"response" => data}.to_json)
     end
 
