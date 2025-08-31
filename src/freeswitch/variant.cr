@@ -218,6 +218,18 @@ module Agent
       next_events << publish_virtual_event(softswitch_id, "list_agents", {"response" => data_users}.to_json)
     end
 
+    def publish_list_callcenter_tiers(next_events, conn, softswitch_id)
+      query = %{select SPLIT_PART(a.agent_contact, '/', 2) as agent, q.queue_extension || '@' || d.domain_name as queue,  d.domain_name from v_call_center_tiers as t left join v_call_center_agents as a on t.call_center_agent_uuid = a.call_center_agent_uuid left join v_call_center_queues as q on q.call_center_queue_uuid = t.call_center_queue_uuid inner join v_domains as d on t.domain_uuid = d.domain_uuid}
+      result = sql(conn, query)
+
+      data = Array(Hash(String, String)).new
+      result.each do |row|
+        data << {"agent" => row["agent"], "queue" => row["queue"], "domain" => row["domain_name"], "state" => "Ready"}
+      end
+
+      next_events << publish_virtual_event(softswitch_id, "list_tiers", {"response" => data}.to_json)
+    end
+
     private def sql(conn, query : String) : Array(Hash(String, String))
       cmd = %{
      local database = require "resources.functions.database"
