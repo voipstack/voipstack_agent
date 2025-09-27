@@ -58,7 +58,7 @@ module Agent
         resp = conn.api(args)
         Log.debug { "[EXECUTOR][FREESWITCH] API command executed: #{command} with args: #{args} -> #{resp}" }
       else
-        conn.conn.sendmsg(UUID.v4.hexstring, command, input, "")
+        conn.conn.sendmsg(input["call-uuid"] || nil, command, input, "")
       end
 
       next_events
