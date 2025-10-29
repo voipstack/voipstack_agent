@@ -1,0 +1,30 @@
+FROM centos:7
+
+# Update repositories to vault (CentOS 7 is EOL)
+RUN sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo && \
+    sed -i s/^#.*baseurl=http/baseurl=http/g /etc/yum.repos.d/*.repo && \
+    sed -i s/^mirrorlist=http/#mirrorlist=http/g /etc/yum.repos.d/*.repo
+
+# Install basic tools needed for testing
+RUN yum update -y && yum install -y \
+    sudo \
+    wget \
+    curl \
+    tar \
+    systemd \
+    ca-certificates \
+    epel-release \
+    && yum clean all
+
+# Create a test directory
+WORKDIR /test
+
+# Copy the installation scripts
+COPY install.centos7.sh /test/install.centos7.sh
+COPY common.sh /test/common.sh
+
+# Make them executable
+RUN chmod +x /test/install.centos7.sh /test/common.sh
+
+# Default command to keep container running
+CMD ["tail", "-f", "/dev/null"]

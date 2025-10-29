@@ -1,0 +1,24 @@
+FROM debian:12-slim
+
+# Install basic tools needed for testing
+RUN apt-get update && apt-get install -y \
+    sudo \
+    curl \
+    wget \
+    tar \
+    systemd \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create a test directory
+WORKDIR /test
+
+# Copy the installation scripts
+COPY install.debian.sh /test/install.debian.sh
+COPY common.sh /test/common.sh
+
+# Make them executable
+RUN chmod +x /test/install.debian.sh /test/common.sh
+
+# Default command to keep container running
+CMD ["tail", "-f", "/dev/null"]
