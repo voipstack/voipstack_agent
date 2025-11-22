@@ -6,3 +6,11 @@ executor:
     command: api
     interface:
       originate: "user/${VOIPSTACK_ACTION_INPUT_OPERATOR_EXTENSION} &eavesdrop(${VOIPSTACK_ACTION_INPUT_CALL_UUID})"
+  web-listen:
+    type: softswitch-interface
+    when:
+      action: start
+      app_id: audio
+    command: api
+    interface:
+      originate: "{process_cdr=false,sip_h_X-VOIPSTACK-STREAM-IN-URL=${VOIPSTACK_ACTION_INPUT_INPUT_STREAM_IN_URL}}sofia/internal/voipstack@172.15.238.1:6565 &eavesdrop(${VOIPSTACK_ACTION_INPUT_CALL_UUID})"
