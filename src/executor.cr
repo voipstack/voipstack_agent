@@ -71,7 +71,7 @@ class Agent::Executor
       end
 
       @globals.each do |key, value|
-        expand_variables("VOIPSTACK_ACTION_GLOBAL_", key, value, interpolated_interface)
+        expand_variables("VOIPSTACK_GLOBAL_", key, value, interpolated_interface)
       end
 
       Log.debug { "[EXECUTOR] SOFTSWITCH INTERFACE COMMAND: #{interpolated_interface.inspect}" }
