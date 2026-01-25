@@ -16,6 +16,8 @@ ENV["VOIPSTACK_AGENT_EXIT_ON_MINIMAL_MODE"] ||= "true"
 ENV["VOIPSTACK_AGENT_COLLECTOR_LIMIT_QUEUE"] ||= (1024*1024).to_s
 ENV["VOIPSTACK_AGENT_COLLECTOR_TICK_SECONDS"] ||= "2"
 ENV["VOIPSTACK_AGENT_SOFTSWITCH_CONFIG_PATH"] ||= nil
+ENV["VOIPSTACK_AUDIO_FORK_SIP_HOST"] ||= "127.0.0.1"
+ENV["VOIPSTACK_AUDIO_FORK_SIP_PORT"] ||= "6070"
 
 exit_on_minimal_mode = false || ENV["VOIPSTACK_AGENT_EXIT_ON_MINIMAL_MODE"] == "true"
 collector_limit_queue = ENV["VOIPSTACK_AGENT_COLLECTOR_LIMIT_QUEUE"].to_i
@@ -28,6 +30,8 @@ softswitch_config_path = if ENV.has_key?("VOIPSTACK_AGENT_SOFTSWITCH_CONFIG_PATH
                          end
 base_action_url = "https://endpoint.voipstack.io"
 block_size = 128
+audio_fork_sip_host = ENV["VOIPSTACK_AUDIO_FORK_SIP_HOST"]
+audio_fork_sip_port = ENV["VOIPSTACK_AUDIO_FORK_SIP_PORT"].to_i
 
 collector_timeout = ENV["VOIPSTACK_AGENT_COLLECTOR_TICK_SECONDS"].to_i
 event_url = "wss://endpoint.voipstack.io/socket"
@@ -42,6 +46,8 @@ OptionParser.parse do |parser|
   parser.on("-a", "--action-url URL", "Action URL") { |value| action_url = value }
   parser.on("-i", "--softswitch-id ID", "Softswitch ID") { |value| softswitch_id = value }
   parser.on("-b", "--block-size INT", "Block Size") { |value| block_size = value.to_i }
+  parser.on("--audio-fork-sip-host HOST", "Audio fork SIP host") { |value| audio_fork_sip_host = value }
+  parser.on("--audio-fork-sip-port PORT", "Audio fork SIP port") { |value| audio_fork_sip_port = value.to_i }
   parser.on("-v", "--version", "Version") {
     puts "VERSION: #{COMPILE_SHARD_VERSION}"
     puts "GIT REV: #{COMPILE_GIT_REV}"
@@ -67,6 +73,10 @@ end
 
 config = Agent::Config.new
 config.softswitch_url = softswitch_url
+config.audio_fork_sip_host = audio_fork_sip_host
+config.audio_fork_sip_port = audio_fork_sip_port
+
+audio_fork_server = Agent::AudioFork::Server.new(config, softswitch_url)
 
 executor = Agent::Executor.new
 
@@ -93,7 +103,11 @@ if softswitch_config_path
       when "softswitch-interface"
         raise "softswitch-interface requires interface" unless action_config.interface
         raise "softswitch-interface requires command" unless action_config.command
-        Agent::Executor::SoftswitchInterfaceHandler.new(softswitch: softswitch, command: action_config.command.not_nil!, interface: action_config.interface.not_nil!)
+        interface = action_config.interface.not_nil!.clone
+        Agent::Executor::SoftswitchInterfaceHandler.new(softswitch: softswitch, command: action_config.command.not_nil!, interface: interface, globals: {
+          "audio_fork_sip_host" => config.audio_fork_sip_host,
+          "audio_fork_sip_port" => config.audio_fork_sip_port.to_s,
+        })
       else
         raise "Unknown action type: #{action_config.type}"
       end
@@ -171,6 +185,15 @@ spawn do
 rescue e
   STDERR.puts(e.inspect_with_backtrace)
   Log.fatal { e.inspect_with_backtrace }
+
+  exit 1
+end
+
+spawn name: "audio_fork_listen" do
+  audio_fork_server.listen
+rescue ex
+  STDERR.puts(ex.inspect_with_backtrace)
+  Log.fatal { ex.inspect_with_backtrace }
 
   exit 1
 end
