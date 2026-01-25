@@ -28,5 +28,3 @@ dependencies:
     license: MIT
   phoenixchannels:
     github: bit4bit/phoenixchannels.cr
-  voipstack_audio_fork:
-    github: voipstack/voipstack_audio_fork

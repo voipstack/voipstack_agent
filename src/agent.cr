@@ -5,7 +5,6 @@ require "log"
 require "crest"
 require "freeswitch-esl"
 require "phoenixchannels"
-require "voipstack_audio_fork"
 
 module Agent
   VERSION = "0.1.0"
@@ -21,14 +20,20 @@ module Agent
     @minimal_timeout : Int32 = 300
     @audio_fork_sip_host : String = "127.0.0.1"
     @audio_fork_sip_port : Int32 = 0
+    @audio_fork_command_path : String = ""
+    @audio_fork_sip_pbx : String = ""
 
     setter :softswitch_url
     setter :minimal_timeout
     setter :audio_fork_sip_host
     setter :audio_fork_sip_port
+    setter :audio_fork_command_path
+    setter :audio_fork_sip_pbx
     getter :minimal_timeout
     getter :audio_fork_sip_host
     getter :audio_fork_sip_port
+    getter :audio_fork_command_path
+    getter :audio_fork_sip_pbx
 
     def softswitch
       if @softswitch_url.nil?

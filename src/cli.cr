@@ -18,6 +18,8 @@ ENV["VOIPSTACK_AGENT_COLLECTOR_TICK_SECONDS"] ||= "2"
 ENV["VOIPSTACK_AGENT_SOFTSWITCH_CONFIG_PATH"] ||= nil
 ENV["VOIPSTACK_AUDIO_FORK_SIP_HOST"] ||= "127.0.0.1"
 ENV["VOIPSTACK_AUDIO_FORK_SIP_PORT"] ||= "6070"
+ENV["VOIPSTACK_AUDIO_FORK_COMMAND_PATH"] ||= ""
+ENV["VOIPSTACK_AUDIO_FORK_SIP_PBX"] ||= "localhost:5060"
 
 exit_on_minimal_mode = false || ENV["VOIPSTACK_AGENT_EXIT_ON_MINIMAL_MODE"] == "true"
 collector_limit_queue = ENV["VOIPSTACK_AGENT_COLLECTOR_LIMIT_QUEUE"].to_i
@@ -32,6 +34,8 @@ base_action_url = "https://endpoint.voipstack.io"
 block_size = 128
 audio_fork_sip_host = ENV["VOIPSTACK_AUDIO_FORK_SIP_HOST"]
 audio_fork_sip_port = ENV["VOIPSTACK_AUDIO_FORK_SIP_PORT"].to_i
+audio_fork_command_path = ENV["VOIPSTACK_AUDIO_FORK_COMMAND_PATH"]
+audio_fork_sip_pbx = ENV["VOIPSTACK_AUDIO_FORK_SIP_PBX"]
 
 collector_timeout = ENV["VOIPSTACK_AGENT_COLLECTOR_TICK_SECONDS"].to_i
 event_url = "wss://endpoint.voipstack.io/socket"
@@ -46,6 +50,7 @@ OptionParser.parse do |parser|
   parser.on("-a", "--action-url URL", "Action URL") { |value| action_url = value }
   parser.on("-i", "--softswitch-id ID", "Softswitch ID") { |value| softswitch_id = value }
   parser.on("-b", "--block-size INT", "Block Size") { |value| block_size = value.to_i }
+  parser.on("--audio-fork-sip-pbx HOST:PORT", "Audio fork SIP PBX : Indicate the origin PBX") { |value| audio_fork_sip_pbx = value }
   parser.on("--audio-fork-sip-host HOST", "Audio fork SIP host") { |value| audio_fork_sip_host = value }
   parser.on("--audio-fork-sip-port PORT", "Audio fork SIP port") { |value| audio_fork_sip_port = value.to_i }
   parser.on("-v", "--version", "Version") {
@@ -73,10 +78,12 @@ end
 
 config = Agent::Config.new
 config.softswitch_url = softswitch_url
+config.audio_fork_sip_pbx = audio_fork_sip_pbx
 config.audio_fork_sip_host = audio_fork_sip_host
 config.audio_fork_sip_port = audio_fork_sip_port
+config.audio_fork_command_path = audio_fork_command_path
 
-audio_fork_server = Agent::AudioFork::Server.new(config, softswitch_url)
+audio_fork_server = Agent::AudioFork::Server.new(config)
 
 executor = Agent::Executor.new
 
@@ -190,7 +197,10 @@ rescue e
 end
 
 spawn name: "audio_fork_listen" do
-  audio_fork_server.listen
+  loop do
+    audio_fork_server.listen
+    sleep 5.seconds
+  end
 rescue ex
   STDERR.puts(ex.inspect_with_backtrace)
   Log.fatal { ex.inspect_with_backtrace }
