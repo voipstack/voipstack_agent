@@ -57,7 +57,7 @@ class Agent::Executor
   end
 
   class SoftswitchInterfaceHandler < Handler
-    def initialize(@softswitch : Agent::SoftswitchState, @command : String, @interface : Hash(String, String))
+    def initialize(@softswitch : Agent::SoftswitchState, @command : String, @interface : Hash(String, String), @globals = Hash(String, String).new)
     end
 
     def handle_action(action : Agent::Action) : Array(Agent::Event)
@@ -68,6 +68,10 @@ class Agent::Executor
 
       action.vendor.each do |key, value|
         expand_variables("VOIPSTACK_ACTION_VENDOR_", key, value, interpolated_interface)
+      end
+
+      @globals.each do |key, value|
+        expand_variables("VOIPSTACK_ACTION_GLOBAL_", key, value, interpolated_interface)
       end
 
       Log.debug { "[EXECUTOR] SOFTSWITCH INTERFACE COMMAND: #{interpolated_interface.inspect}" }
