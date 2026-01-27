@@ -14,6 +14,15 @@ Environment=VOIPSTACK_AGENT_PRIVATE_KEY_PEM_PATH=/etc/voipstack/private_key.pem
 # example freeswitch fusion pbx: fsfusionpbx://none:ClueCon@localhost:8021
 # example HEPv3 any SIP Platform: generic+udp+hepv3://localhost:9060
 Environment=VOIPSTACK_AGENT_SOFTSWITCH_URL=fs://none:ClueCon@localhost:8021
+
+# Audio forking configuration (optional)
+# VOIPSTACK_AUDIO_FORK_SIP_HOST: Host for forked audio (e.g., "sip.example.com")
+# VOIPSTACK_AUDIO_FORK_SIP_PORT: Port for forked audio (e.g 6070)
+# VOIPSTACK_AUDIO_FORK_SIP_PBX: The PBX to allow for call forking (e.g., "localhost:5060")
+# Environment=VOIPSTACK_AUDIO_FORK_SIP_HOST=localhost
+# Environment=VOIPSTACK_AUDIO_FORK_SIP_PORT=6070
+# Environment=VOIPSTACK_AUDIO_FORK_SIP_PBX=localhost:5060
+
 # When there is not state consumption, the process will exit.
 # This avoid unnecessary billing.
 Environment=VOIPSTACK_AGENT_EXIT_ON_MINIMAL_MODE=true
