@@ -36,3 +36,7 @@ shards:
     git: https://github.com/bit4bit/sip_utils.cr.git
     version: 0.1.0+git.commit.bb275fed10d4eb7ac839f97733ddad4f08d83d4b
 
+  voipstack_audio_fork:
+    git: https://github.com/voipstack/voipstack_audio_fork.git
+    version: 0.1.1+git.commit.73a11861bfdea5d1ed40549a02442bae92b09692
+

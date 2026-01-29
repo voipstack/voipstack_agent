@@ -7,12 +7,16 @@ authors:
 targets:
   voipstack_agent:
     main: src/cli.cr
+  voipstack_agent_media:
+    main: src/cli_media.cr
 
 crystal: ">= 1.16"
 
 dependencies:
   crest:
     github: mamantoha/crest
+  voipstack_audio_fork:
+    github: voipstack/voipstack_audio_fork
   freeswitch-esl:
     github: bit4bit/freeswitch-esl.cr
     branch: main

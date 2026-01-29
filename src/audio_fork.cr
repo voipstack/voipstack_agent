@@ -1,5 +1,5 @@
 module Agent::AudioFork
-  Log = ::Log.for("voipstack_audio_fork")
+  Log = ::Log.for("voipstack_agent_media")
 
   class Server
     def initialize(@config : Agent::Config)
@@ -8,9 +8,9 @@ module Agent::AudioFork
     private def find_command : String?
       command_path = @config.audio_fork_command_path
       if command_path.empty?
-        return Process.find_executable("voipstack_audio_fork")
+        return Process.find_executable("voipstack_agent_media")
       elsif !File::Info.executable?(command_path)
-        raise "voipstack_audio_fork command at #{command_path} is not executable"
+        raise "voipstack_agent_media command at #{command_path} is not executable"
       end
       command_path
     end
@@ -33,7 +33,7 @@ module Agent::AudioFork
       Log.info { "Spawning audio fork command: #{command} #{args.join(" ")}" }
 
       if command.nil?
-        Log.info { "voipstack_audio_fork command not found in PATH. Omiting." }
+        Log.info { "voipstack_agent_media command not found in PATH. Omiting." }
         sleep
         return
       end
