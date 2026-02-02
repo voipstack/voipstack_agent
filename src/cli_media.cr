@@ -4,6 +4,7 @@ require "option_parser"
 require "sip_utils"
 require "http/web_socket"
 require "voipstack_audio_fork"
+require "./heartbeat"
 
 Log.setup_from_env(default_level: Log::Severity::Debug)
 
@@ -11,6 +12,7 @@ listen_host = "127.0.0.1"
 listen_port = 5060
 pbx_host = "127.0.0.1"
 pbx_port = 5080
+heartbeat_port = nil
 
 OptionParser.parse do |parser|
   parser.banner = "Usage: voipstack_audio_fork [options]"
@@ -25,6 +27,10 @@ OptionParser.parse do |parser|
 
   parser.on("-p PORT", "--port=PORT", "Listen port") do |port|
     listen_port = port.to_i
+  end
+
+  parser.on("-b PORT", "--heartbeat-port=PORT", "Heartbeat port") do |port|
+    heartbeat_port = port.to_i
   end
 
   parser.on("-h", "--help", "Display this help message") do
@@ -79,4 +85,9 @@ media_dumper = VoipstackWebsocketMediaDumper.new
 address = audio_fork.bind_pair(listen_host, listen_port, pbx_host, pbx_port)
 audio_fork.attach_dumper(media_dumper)
 Log.info { "Listening on #{address}" }
+
+Log.info { "Starting heartbeat client for parent monitoring" }
+heartbeat_client = Heartbeat::Client.new(heartbeat_port.not_nil!)
+heartbeat_client.start
+
 audio_fork.listen

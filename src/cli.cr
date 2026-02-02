@@ -1,4 +1,5 @@
 require "./agent"
+require "./heartbeat"
 require "option_parser"
 require "colorize"
 require "log"
@@ -20,6 +21,7 @@ ENV["VOIPSTACK_AUDIO_FORK_SIP_HOST"] ||= "127.0.0.1"
 ENV["VOIPSTACK_AUDIO_FORK_SIP_PORT"] ||= "6070"
 ENV["VOIPSTACK_AUDIO_FORK_COMMAND_PATH"] ||= ""
 ENV["VOIPSTACK_AUDIO_FORK_SIP_PBX"] ||= "localhost:5060"
+ENV["HEARTBEAT_PORT"] ||= nil
 
 exit_on_minimal_mode = false || ENV["VOIPSTACK_AGENT_EXIT_ON_MINIMAL_MODE"] == "true"
 collector_limit_queue = ENV["VOIPSTACK_AGENT_COLLECTOR_LIMIT_QUEUE"].to_i
@@ -83,7 +85,10 @@ config.audio_fork_sip_host = audio_fork_sip_host
 config.audio_fork_sip_port = audio_fork_sip_port
 config.audio_fork_command_path = audio_fork_command_path
 
-audio_fork_server = Agent::AudioFork::Server.new(config)
+heartbeat_server = Heartbeat::Server.new
+heartbeat_server.start
+
+audio_fork_server = Agent::AudioFork::Server.new(config, heartbeat_server.heartbeat_port)
 
 executor = Agent::Executor.new
 

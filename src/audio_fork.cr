@@ -2,7 +2,7 @@ module Agent::AudioFork
   Log = ::Log.for("voipstack_agent_media")
 
   class Server
-    def initialize(@config : Agent::Config)
+    def initialize(@config : Agent::Config, @port : Int32)
     end
 
     private def find_command : String?
@@ -27,7 +27,7 @@ module Agent::AudioFork
         "--listen", @config.audio_fork_sip_host,
         "--port", @config.audio_fork_sip_port.to_s,
         "--pbx", "sip://#{pbx_host}:#{pbx_port}",
-        "--output", "voipstack://",
+        "--heartbeat-port", @port.to_s,
       ]
 
       Log.info { "Spawning audio fork command: #{command} #{args.join(" ")}" }
