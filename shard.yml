@@ -10,7 +10,7 @@ targets:
   voipstack_agent_media:
     main: src/cli_media.cr
 
-crystal: ">= 1.16"
+crystal: ">= 1.19"
 
 dependencies:
   crest:
