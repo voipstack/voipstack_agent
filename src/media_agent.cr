@@ -1,4 +1,4 @@
-module Agent::AudioFork
+module Agent::Media
   Log = ::Log.for("voipstack_agent_media")
 
   class Server
@@ -6,7 +6,7 @@ module Agent::AudioFork
     end
 
     private def find_command : String?
-      command_path = @config.audio_fork_command_path
+      command_path = @config.agent_media_command_path
       if command_path.empty?
         return Process.find_executable("voipstack_agent_media")
       elsif !File::Info.executable?(command_path)
@@ -16,16 +16,16 @@ module Agent::AudioFork
     end
 
     def listen : Nil
-      Log.info { "Starting audio fork server with host=#{@config.audio_fork_sip_host} port=#{@config.audio_fork_sip_port} pbx=#{@config.audio_fork_sip_pbx}" }
+      Log.info { "Starting media agent server with host=#{@config.agent_media_sip_host} port=#{@config.agent_media_sip_port} pbx=#{@config.agent_media_sip_pbx}" }
 
-      pbx_params = @config.audio_fork_sip_pbx.split(":")
+      pbx_params = @config.agent_media_sip_pbx.split(":")
       pbx_host = pbx_params[0]
       pbx_port = pbx_params[1]
 
       command = find_command
       args = [
-        "--listen", @config.audio_fork_sip_host,
-        "--port", @config.audio_fork_sip_port.to_s,
+        "--listen", @config.agent_media_sip_host,
+        "--port", @config.agent_media_sip_port.to_s,
         "--pbx", "sip://#{pbx_host}:#{pbx_port}",
         "--heartbeat-port", @port.to_s,
       ]

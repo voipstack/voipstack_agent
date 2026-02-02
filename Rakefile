@@ -1,5 +1,5 @@
 require 'yaml'
-CRYSTAL_VERSION = '1.19'
+CRYSTAL_VERSION = '1.18'
 
 desc 'Build production'
 task :prod do

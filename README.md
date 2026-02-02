@@ -30,6 +30,10 @@ sudo systemctl enable voipstack_agent
 sudo systemctl start voipstack_agent
 ```
 
+#### Media Server
+
+For realtime media use the executable `voipstack_agent_media`.
+
 ## Development
 
 Step by step to run the agent:

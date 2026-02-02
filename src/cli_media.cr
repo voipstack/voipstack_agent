@@ -15,7 +15,7 @@ pbx_port = 5080
 heartbeat_port = nil
 
 OptionParser.parse do |parser|
-  parser.banner = "Usage: voipstack_audio_fork [options]"
+  parser.banner = "Usage: voipstack_agent_media [options]"
 
   parser.on("-s URL", "--pbx=URL", "PBX URL") do |url|
     pbx_host, pbx_port = URI.parse(url).host.not_nil!, URI.parse(url).port.not_nil!

@@ -17,10 +17,10 @@ ENV["VOIPSTACK_AGENT_EXIT_ON_MINIMAL_MODE"] ||= "true"
 ENV["VOIPSTACK_AGENT_COLLECTOR_LIMIT_QUEUE"] ||= (1024*1024).to_s
 ENV["VOIPSTACK_AGENT_COLLECTOR_TICK_SECONDS"] ||= "2"
 ENV["VOIPSTACK_AGENT_SOFTSWITCH_CONFIG_PATH"] ||= nil
-ENV["VOIPSTACK_AUDIO_FORK_SIP_HOST"] ||= "127.0.0.1"
-ENV["VOIPSTACK_AUDIO_FORK_SIP_PORT"] ||= "6070"
-ENV["VOIPSTACK_AUDIO_FORK_COMMAND_PATH"] ||= ""
-ENV["VOIPSTACK_AUDIO_FORK_SIP_PBX"] ||= "localhost:5060"
+ENV["VOIPSTACK_AGENT_MEDIA_SIP_HOST"] ||= "127.0.0.1"
+ENV["VOIPSTACK_AGENT_MEDIA_SIP_PORT"] ||= "6070"
+ENV["VOIPSTACK_AGENT_MEDIA_COMMAND_PATH"] ||= ""
+ENV["VOIPSTACK_AGENT_MEDIA_SIP_PBX"] ||= "localhost:5060"
 ENV["HEARTBEAT_PORT"] ||= nil
 
 exit_on_minimal_mode = false || ENV["VOIPSTACK_AGENT_EXIT_ON_MINIMAL_MODE"] == "true"
@@ -34,10 +34,10 @@ softswitch_config_path = if ENV.has_key?("VOIPSTACK_AGENT_SOFTSWITCH_CONFIG_PATH
                          end
 base_action_url = "https://endpoint.voipstack.io"
 block_size = 128
-audio_fork_sip_host = ENV["VOIPSTACK_AUDIO_FORK_SIP_HOST"]
-audio_fork_sip_port = ENV["VOIPSTACK_AUDIO_FORK_SIP_PORT"].to_i
-audio_fork_command_path = ENV["VOIPSTACK_AUDIO_FORK_COMMAND_PATH"]
-audio_fork_sip_pbx = ENV["VOIPSTACK_AUDIO_FORK_SIP_PBX"]
+agent_media_sip_host = ENV["VOIPSTACK_AGENT_MEDIA_SIP_HOST"]
+agent_media_sip_port = ENV["VOIPSTACK_AGENT_MEDIA_SIP_PORT"].to_i
+agent_media_command_path = ENV["VOIPSTACK_AGENT_MEDIA_COMMAND_PATH"]
+agent_media_sip_pbx = ENV["VOIPSTACK_AGENT_MEDIA_SIP_PBX"]
 
 collector_timeout = ENV["VOIPSTACK_AGENT_COLLECTOR_TICK_SECONDS"].to_i
 event_url = "wss://endpoint.voipstack.io/socket"
@@ -52,9 +52,9 @@ OptionParser.parse do |parser|
   parser.on("-a", "--action-url URL", "Action URL") { |value| action_url = value }
   parser.on("-i", "--softswitch-id ID", "Softswitch ID") { |value| softswitch_id = value }
   parser.on("-b", "--block-size INT", "Block Size") { |value| block_size = value.to_i }
-  parser.on("--audio-fork-sip-pbx HOST:PORT", "Audio fork SIP PBX : Indicate the origin PBX") { |value| audio_fork_sip_pbx = value }
-  parser.on("--audio-fork-sip-host HOST", "Audio fork SIP host") { |value| audio_fork_sip_host = value }
-  parser.on("--audio-fork-sip-port PORT", "Audio fork SIP port") { |value| audio_fork_sip_port = value.to_i }
+  parser.on("--agent-media-sip-pbx HOST:PORT", "Agent Media SIP PBX : Indicate the origin PBX") { |value| agent_media_sip_pbx = value }
+  parser.on("--agent-media-sip-host HOST", "Agent Media SIP host") { |value| agent_media_sip_host = value }
+  parser.on("--agent-media-sip-port PORT", "Agent Media SIP port") { |value| agent_media_sip_port = value.to_i }
   parser.on("-v", "--version", "Version") {
     puts "VERSION: #{COMPILE_SHARD_VERSION}"
     puts "GIT REV: #{COMPILE_GIT_REV}"
@@ -80,15 +80,15 @@ end
 
 config = Agent::Config.new
 config.softswitch_url = softswitch_url
-config.audio_fork_sip_pbx = audio_fork_sip_pbx
-config.audio_fork_sip_host = audio_fork_sip_host
-config.audio_fork_sip_port = audio_fork_sip_port
-config.audio_fork_command_path = audio_fork_command_path
+config.agent_media_sip_pbx = agent_media_sip_pbx
+config.agent_media_sip_host = agent_media_sip_host
+config.agent_media_sip_port = agent_media_sip_port
+config.agent_media_command_path = agent_media_command_path
 
 heartbeat_server = Heartbeat::Server.new
 heartbeat_server.start
 
-audio_fork_server = Agent::AudioFork::Server.new(config, heartbeat_server.heartbeat_port)
+agent_media_server = Agent::Media::Server.new(config, heartbeat_server.heartbeat_port)
 
 executor = Agent::Executor.new
 
@@ -117,8 +117,8 @@ if softswitch_config_path
         raise "softswitch-interface requires command" unless action_config.command
         interface = action_config.interface.not_nil!.clone
         Agent::Executor::SoftswitchInterfaceHandler.new(softswitch: softswitch, command: action_config.command.not_nil!, interface: interface, globals: {
-          "audio_fork_sip_host" => config.audio_fork_sip_host,
-          "audio_fork_sip_port" => config.audio_fork_sip_port.to_s,
+          "agent_media_sip_host" => config.agent_media_sip_host,
+          "agent_media_sip_port" => config.agent_media_sip_port.to_s,
         })
       else
         raise "Unknown action type: #{action_config.type}"
@@ -201,9 +201,9 @@ rescue e
   exit 1
 end
 
-spawn name: "audio_fork_listen" do
+spawn name: "agent_media_listen" do
   loop do
-    audio_fork_server.listen
+    agent_media_server.listen
     sleep 5.seconds
   end
 rescue ex

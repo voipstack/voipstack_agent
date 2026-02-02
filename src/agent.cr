@@ -18,22 +18,22 @@ module Agent
   class Config
     @softswitch_url : String = ""
     @minimal_timeout : Int32 = 300
-    @audio_fork_sip_host : String = "127.0.0.1"
-    @audio_fork_sip_port : Int32 = 0
-    @audio_fork_command_path : String = ""
-    @audio_fork_sip_pbx : String = ""
+    @agent_media_sip_host : String = "127.0.0.1"
+    @agent_media_sip_port : Int32 = 0
+    @agent_media_command_path : String = ""
+    @agent_media_sip_pbx : String = ""
 
     setter :softswitch_url
     setter :minimal_timeout
-    setter :audio_fork_sip_host
-    setter :audio_fork_sip_port
-    setter :audio_fork_command_path
-    setter :audio_fork_sip_pbx
+    setter :agent_media_sip_host
+    setter :agent_media_sip_port
+    setter :agent_media_command_path
+    setter :agent_media_sip_pbx
     getter :minimal_timeout
-    getter :audio_fork_sip_host
-    getter :audio_fork_sip_port
-    getter :audio_fork_command_path
-    getter :audio_fork_sip_pbx
+    getter :agent_media_sip_host
+    getter :agent_media_sip_port
+    getter :agent_media_command_path
+    getter :agent_media_sip_pbx
 
     def softswitch
       if @softswitch_url.nil?
@@ -382,4 +382,4 @@ require "./asterisk"
 require "./crypto"
 require "./circular_buffer"
 require "./generic_hepv3"
-require "./audio_fork"
+require "./media_agent"

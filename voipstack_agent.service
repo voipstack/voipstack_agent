@@ -15,13 +15,16 @@ Environment=VOIPSTACK_AGENT_PRIVATE_KEY_PEM_PATH=/etc/voipstack/private_key.pem
 # example HEPv3 any SIP Platform: generic+udp+hepv3://localhost:9060
 Environment=VOIPSTACK_AGENT_SOFTSWITCH_URL=fs://none:ClueCon@localhost:8021
 
-# Audio forking configuration (optional)
-# VOIPSTACK_AUDIO_FORK_SIP_HOST: Host for forked audio (e.g., "sip.example.com")
-# VOIPSTACK_AUDIO_FORK_SIP_PORT: Port for forked audio (e.g 6070)
-# VOIPSTACK_AUDIO_FORK_SIP_PBX: The PBX to allow for call forking (e.g., "localhost:5060")
-# Environment=VOIPSTACK_AUDIO_FORK_SIP_HOST=localhost
-# Environment=VOIPSTACK_AUDIO_FORK_SIP_PORT=6070
-# Environment=VOIPSTACK_AUDIO_FORK_SIP_PBX=localhost:5060
+# Media agent configuration (optional)
+# Requires binary voipstack_media_agent
+# VOIPSTACK_MEDIA_AGENT_SIP_HOST: Host for media agent (e.g., "sip.example.com")
+# VOIPSTACK_MEDIA_AGENT_SIP_PORT: Port for media agent (e.g 6070)
+# VOIPSTACK_MEDIA_AGENT_SIP_PBX: The PBX to allow for call forking (e.g., "localhost:5060")
+# VOIPSTACK_AGENT_MEDIA_COMMAND_PATH: Path to executable media agent binary
+Environment=VOIPSTACK_MEDIA_AGENT_SIP_HOST=localhost
+Environment=VOIPSTACK_MEDIA_AGENT_SIP_PORT=6070
+# Environment=VOIPSTACK_MEDIA_AGENT_SIP_PBX=localhost:5060
+# Environment=VOIPSTACK_AGENT_MEDIA_COMMAND_PATH=/opt/voipstack_media_agent
 
 # When there is not state consumption, the process will exit.
 # This avoid unnecessary billing.
