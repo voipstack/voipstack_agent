@@ -136,6 +136,22 @@ match_http_post = Agent::ActionMatch.new
 match_http_post["handler"] = "http_post"
 executor.when(match_http_post, Agent::Executor::ProxyHTTPPostHandler.new(handler: web_handler))
 
+# default web-listen
+match_web_listen = Agent::ActionMatch.new
+match_web_listen["action"] = "start"
+match_web_listen["app_id"] = "audio"
+executor.when(match_web_listen, Agent::Executor::SoftswitchInterfaceHandler.new(
+  softswitch: softswitch,
+  command: "api",
+  interface: {
+    "originate" => "{process_cdr=false,sip_h_X-VOIPSTACK-STREAM-IN-URL=${VOIPSTACK_ACTION_INPUT_INPUT_STREAM_IN_URL}}sofia/internal/voipstack@${VOIPSTACK_GLOBAL_AGENT_MEDIA_SIP_HOST}:${VOIPSTACK_GLOBAL_AGENT_MEDIA_SIP_PORT} &eavesdrop(${VOIPSTACK_ACTION_INPUT_CALL_UUID})",
+  },
+  globals: {
+    "agent_media_sip_host" => config.agent_media_sip_host,
+    "agent_media_sip_port" => config.agent_media_sip_port.to_s,
+  }
+))
+
 if action_url.empty?
   action_url = base_action_url + "/#{softswitch.software}/#{softswitch.version}"
 end
