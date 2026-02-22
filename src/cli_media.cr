@@ -13,6 +13,7 @@ listen_port = 5060
 pbx_host = "127.0.0.1"
 pbx_port = 5080
 heartbeat_port = nil
+max_sessions = ENV.fetch("MAX_SESSIONS", "10000").to_i
 
 OptionParser.parse do |parser|
   parser.banner = "Usage: voipstack_agent_media [options]"
@@ -33,6 +34,10 @@ OptionParser.parse do |parser|
     heartbeat_port = port.to_i
   end
 
+  parser.on("-m COUNT", "--max-sessions=COUNT", "Maximum concurrent sessions (default: 10000, env: MAX_SESSIONS)") do |count|
+    max_sessions = count.to_i
+  end
+
   parser.on("-h", "--help", "Display this help message") do
     puts parser
     exit
@@ -45,19 +50,22 @@ class VoipstackWebsocketMediaDumper < VoipstackAudioFork::MediaDumper
   # Store both jitter buffer and websocket for proper cleanup
   record Session, jitter_buffer : VoipstackAudioFork::JitterBuffer, ws : HTTP::WebSocket
 
-  def initialize
+  def initialize(@max_sessions : Int32 = 10_000)
     @sessions = Hash(String, Session).new
     @mutex = Mutex.new
   end
 
   def start(session_id, context : Hash(String, String))
-    Log.info { "Starting websocket media dump for session #{session_id} : #{context.inspect}" }
-
     begin
+      # Check session limit
+      current_count = @mutex.synchronize { @sessions.size }
+      if current_count >= @max_sessions
+        Log.error { "Session limit reached: #{current_count}/#{@max_sessions}" }
+        raise "Max sessions limit reached"
+      end
+
       url = render_websocket_url(context)
       raise "Missing X-VOIPSTACK-STREAM-IN-URL header" if url.nil? || url.empty?
-
-      Log.info { "Voipstack WebSocket URL: #{url}" }
 
       ws = HTTP::WebSocket.new(URI.parse(url))
       writer = VoipstackAudioFork::WebsocketJitterWriter.new(ws)
@@ -164,11 +172,11 @@ class VoipstackWebsocketMediaDumper < VoipstackAudioFork::MediaDumper
 end
 
 audio_fork = VoipstackAudioFork::Server.new
-media_dumper = VoipstackWebsocketMediaDumper.new
+media_dumper = VoipstackWebsocketMediaDumper.new(max_sessions)
 
 address = audio_fork.bind_pair(listen_host, listen_port, pbx_host, pbx_port)
 audio_fork.attach_dumper(media_dumper)
-Log.info { "Listening on #{address}" }
+Log.info { "Listening on #{address} (max_sessions=#{max_sessions})" }
 
 # Graceful shutdown handler
 Signal::INT.trap do
