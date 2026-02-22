@@ -32,7 +32,11 @@ sudo systemctl start voipstack_agent
 
 #### Media Server
 
-For realtime media use the executable `voipstack_agent_media`.
+To enable real-time stream support, you must use the `voipstack_agent_media` application.
+
+1. Install `voipstack_agent`
+2. Download `voipstack_agent_media`
+3. Update the `voipstack_agent.service` file and set the path to `voipstack_agent_media`
 
 ## Development
 
