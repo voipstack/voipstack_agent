@@ -16,7 +16,7 @@ module Agent::Media
     end
 
     def listen : Nil
-      Log.info { "Starting media agent server with host=#{@config.agent_media_sip_host} port=#{@config.agent_media_sip_port} pbx=#{@config.agent_media_sip_pbx}" }
+      Log.info { "Starting media agent server with host=#{@config.agent_media_sip_host} port=#{@config.agent_media_sip_port} pbx=#{@config.agent_media_sip_pbx} max_sessions=#{@config.agent_media_max_sessions}" }
 
       pbx_params = @config.agent_media_sip_pbx.split(":")
       pbx_host = pbx_params[0]
@@ -28,6 +28,7 @@ module Agent::Media
         "--port", @config.agent_media_sip_port.to_s,
         "--pbx", "sip://#{pbx_host}:#{pbx_port}",
         "--heartbeat-port", @port.to_s,
+        "--max-sessions", @config.agent_media_max_sessions.to_s,
       ]
 
       Log.info { "Spawning audio fork command: #{command} #{args.join(" ")}" }

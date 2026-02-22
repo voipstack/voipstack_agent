@@ -21,6 +21,7 @@ ENV["VOIPSTACK_AGENT_MEDIA_SIP_HOST"] ||= "127.0.0.1"
 ENV["VOIPSTACK_AGENT_MEDIA_SIP_PORT"] ||= "6070"
 ENV["VOIPSTACK_AGENT_MEDIA_COMMAND_PATH"] ||= ""
 ENV["VOIPSTACK_AGENT_MEDIA_SIP_PBX"] ||= "localhost:5060"
+ENV["VOIPSTACK_AGENT_MEDIA_MAX_SESSIONS"] ||= "1000"
 ENV["HEARTBEAT_PORT"] ||= nil
 
 exit_on_minimal_mode = false || ENV["VOIPSTACK_AGENT_EXIT_ON_MINIMAL_MODE"] == "true"
@@ -38,6 +39,7 @@ agent_media_sip_host = ENV["VOIPSTACK_AGENT_MEDIA_SIP_HOST"]
 agent_media_sip_port = ENV["VOIPSTACK_AGENT_MEDIA_SIP_PORT"].to_i
 agent_media_command_path = ENV["VOIPSTACK_AGENT_MEDIA_COMMAND_PATH"]
 agent_media_sip_pbx = ENV["VOIPSTACK_AGENT_MEDIA_SIP_PBX"]
+agent_media_max_sessions = ENV["VOIPSTACK_AGENT_MEDIA_MAX_SESSIONS"].to_i
 
 collector_timeout = ENV["VOIPSTACK_AGENT_COLLECTOR_TICK_SECONDS"].to_i
 event_url = "wss://endpoint.voipstack.io/socket"
@@ -55,6 +57,7 @@ OptionParser.parse do |parser|
   parser.on("--agent-media-sip-pbx HOST:PORT", "Agent Media SIP PBX : Indicate the origin PBX") { |value| agent_media_sip_pbx = value }
   parser.on("--agent-media-sip-host HOST", "Agent Media SIP host") { |value| agent_media_sip_host = value }
   parser.on("--agent-media-sip-port PORT", "Agent Media SIP port") { |value| agent_media_sip_port = value.to_i }
+  parser.on("--agent-media-max-sessions COUNT", "Agent Media max concurrent sessions") { |value| agent_media_max_sessions = value.to_i }
   parser.on("-v", "--version", "Version") {
     puts "VERSION: #{COMPILE_SHARD_VERSION}"
     puts "GIT REV: #{COMPILE_GIT_REV}"
@@ -84,6 +87,7 @@ config.agent_media_sip_pbx = agent_media_sip_pbx
 config.agent_media_sip_host = agent_media_sip_host
 config.agent_media_sip_port = agent_media_sip_port
 config.agent_media_command_path = agent_media_command_path
+config.agent_media_max_sessions = agent_media_max_sessions
 
 heartbeat_server = Heartbeat::Server.new
 heartbeat_server.start

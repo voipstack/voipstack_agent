@@ -34,7 +34,7 @@ OptionParser.parse do |parser|
     heartbeat_port = port.to_i
   end
 
-  parser.on("-m COUNT", "--max-sessions=COUNT", "Maximum concurrent sessions (default: 10000, env: MAX_SESSIONS)") do |count|
+  parser.on("-m COUNT", "--max-sessions=COUNT", "Maximum concurrent sessions (default: 1000, env: MAX_SESSIONS)") do |count|
     max_sessions = count.to_i
   end
 
@@ -50,7 +50,7 @@ class VoipstackWebsocketMediaDumper < VoipstackAudioFork::MediaDumper
   # Store both jitter buffer and websocket for proper cleanup
   record Session, jitter_buffer : VoipstackAudioFork::JitterBuffer, ws : HTTP::WebSocket
 
-  def initialize(@max_sessions : Int32 = 10_000)
+  def initialize(@max_sessions : Int32 = 1_000)
     @sessions = Hash(String, Session).new
     @mutex = Mutex.new
   end

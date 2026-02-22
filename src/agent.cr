@@ -22,6 +22,7 @@ module Agent
     @agent_media_sip_port : Int32 = 0
     @agent_media_command_path : String = ""
     @agent_media_sip_pbx : String = ""
+    @agent_media_max_sessions : Int32 = 1000
 
     setter :softswitch_url
     setter :minimal_timeout
@@ -29,11 +30,13 @@ module Agent
     setter :agent_media_sip_port
     setter :agent_media_command_path
     setter :agent_media_sip_pbx
+    setter :agent_media_max_sessions
     getter :minimal_timeout
     getter :agent_media_sip_host
     getter :agent_media_sip_port
     getter :agent_media_command_path
     getter :agent_media_sip_pbx
+    getter :agent_media_max_sessions
 
     def softswitch
       if @softswitch_url.nil?
