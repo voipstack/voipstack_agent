@@ -42,40 +42,124 @@ end
 class VoipstackWebsocketMediaDumper < VoipstackAudioFork::MediaDumper
   Log = ::Log.for("voipstack_audio_fork::cli::WebsocketMediaDumper")
 
+  # Store both jitter buffer and websocket for proper cleanup
+  record Session, jitter_buffer : VoipstackAudioFork::JitterBuffer, ws : HTTP::WebSocket
+
   def initialize
-    @jitter_buffers = Hash(String, VoipstackAudioFork::JitterBuffer).new
+    @sessions = Hash(String, Session).new
+    @mutex = Mutex.new
   end
 
   def start(session_id, context : Hash(String, String))
     Log.info { "Starting websocket media dump for session #{session_id} : #{context.inspect}" }
 
-    url = render_websocket_url(context)
+    begin
+      url = render_websocket_url(context)
+      raise "Missing X-VOIPSTACK-STREAM-IN-URL header" if url.nil? || url.empty?
 
-    Log.info { "Voipstack WebSocket URL: #{url}" }
-    ws = HTTP::WebSocket.new(URI.parse(url))
-    writer = VoipstackAudioFork::WebsocketJitterWriter.new(ws)
-    jitter_buffer = VoipstackAudioFork::JitterBuffer.new(writer, write_full_packet: true)
-    @jitter_buffers[session_id] = jitter_buffer
+      Log.info { "Voipstack WebSocket URL: #{url}" }
 
-    spawn do
-      ws.run
+      ws = HTTP::WebSocket.new(URI.parse(url))
+      writer = VoipstackAudioFork::WebsocketJitterWriter.new(ws)
+      jitter_buffer = VoipstackAudioFork::JitterBuffer.new(writer, write_full_packet: true)
+
+      @mutex.synchronize do
+        # Clean up existing session if any (shouldn't happen, but be safe)
+        if @sessions.has_key?(session_id)
+          Log.warn { "Session #{session_id} already exists, cleaning up old session first" }
+          old_session = @sessions.delete(session_id)
+          old_session.try do |s|
+            spawn { close_session_resources(s) }
+          end
+        end
+        @sessions[session_id] = Session.new(jitter_buffer, ws)
+      end
+
+      spawn do
+        ws.run
+      rescue ex
+        Log.error(exception: ex) { "Voipstack WebSocket error for session #{session_id}" }
+      ensure
+        # Clean up session if WebSocket closes unexpectedly
+        @mutex.synchronize do
+          stop(session_id) if @sessions.has_key?(session_id)
+        end
+      end
     rescue ex
-      Log.error(exception: ex) { "Voipstack WebSocket error for session #{session_id}" }
+      Log.error(exception: ex) { "Failed to start WebSocket for session #{session_id}" }
+      # Clean up any partial resources
+      stop(session_id)
+      raise ex
     end
   end
 
   def dump(session_id, data : Bytes)
-    jitter_buffer = @jitter_buffers[session_id]?
-    jitter_buffer.try(&.write(data))
+    session = @mutex.synchronize { @sessions[session_id]? }
+    session.try(&.jitter_buffer.write(data))
   end
 
   def stop(session_id)
     Log.info { "Stopping Voipstack WebSocket media dump for session #{session_id}" }
-    @jitter_buffers.delete(session_id)
+
+    session = @mutex.synchronize { @sessions.delete(session_id) }
+
+    if session
+      # Close the jitter buffer writer first to flush any pending data
+      begin
+        session.jitter_buffer.writer.close
+      rescue ex
+        Log.warn(exception: ex) { "Error closing jitter buffer writer for session #{session_id}" }
+      end
+      # Close the WebSocket connection
+      begin
+        session.ws.close
+      rescue ex
+        Log.warn(exception: ex) { "Error closing WebSocket for session #{session_id}" }
+      end
+    end
+  end
+
+  # Close all active sessions - useful for graceful shutdown
+  def close_all : Nil
+    Log.info { "Closing all #{@sessions.size} active sessions" }
+
+    sessions_to_close = @mutex.synchronize do
+      sessions = @sessions.values
+      @sessions.clear
+      sessions
+    end
+
+    sessions_to_close.each do |session|
+      begin
+        session.jitter_buffer.writer.close
+      rescue ex
+        Log.warn(exception: ex) { "Error closing jitter buffer writer during shutdown" }
+      end
+
+      begin
+        session.ws.close
+      rescue ex
+        Log.warn(exception: ex) { "Error closing WebSocket during shutdown" }
+      end
+    end
+  end
+
+  private def close_session_resources(session : Session) : Nil
+    begin
+      session.jitter_buffer.writer.close
+    rescue ex
+      Log.warn(exception: ex) { "Error closing jitter buffer writer" }
+    end
+
+    begin
+      session.ws.close
+    rescue ex
+      Log.warn(exception: ex) { "Error closing WebSocket" }
+    end
   end
 
   private def render_websocket_url(context : Hash(String, String))
-    return context["X-VOIPSTACK-STREAM-IN-URL"].not_nil!
+    context["X-VOIPSTACK-STREAM-IN-URL"]?.try(&.to_s)
   end
 end
 
@@ -85,6 +169,21 @@ media_dumper = VoipstackWebsocketMediaDumper.new
 address = audio_fork.bind_pair(listen_host, listen_port, pbx_host, pbx_port)
 audio_fork.attach_dumper(media_dumper)
 Log.info { "Listening on #{address}" }
+
+# Graceful shutdown handler
+Signal::INT.trap do
+  Log.info { "Received INT signal, shutting down gracefully..." }
+  media_dumper.close_all
+  audio_fork.close
+  exit(0)
+end
+
+Signal::TERM.trap do
+  Log.info { "Received TERM signal, shutting down gracefully..." }
+  media_dumper.close_all
+  audio_fork.close
+  exit(0)
+end
 
 Log.info { "Starting heartbeat client for parent monitoring" }
 heartbeat_client = Heartbeat::Client.new(heartbeat_port.not_nil!)
