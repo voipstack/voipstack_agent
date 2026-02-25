@@ -28,10 +28,9 @@ module Agent::Media
         "--port", @config.agent_media_sip_port.to_s,
         "--pbx", "sip://#{pbx_host}:#{pbx_port}",
         "--heartbeat-port", @port.to_s,
-        "--max-sessions", @config.agent_media_max_sessions.to_s,
       ]
 
-      Log.info { "Spawning audio fork command: #{command} #{args.join(" ")}" }
+      Log.info { "Spawning audio fork command: #{command} #{args.join(" ")} (max_sessions=#{@config.agent_media_max_sessions})" }
 
       if command.nil?
         Log.info { "voipstack_agent_media command not found in PATH. Omiting." }
@@ -39,7 +38,10 @@ module Agent::Media
         return
       end
 
-      Process.run(command, args: args, output: STDOUT, error: STDERR, env: {"LOG_LEVEL" => "info"})
+      Process.run(command, args: args, output: STDOUT, error: STDERR, env: {
+        "LOG_LEVEL"    => "info",
+        "MAX_SESSIONS" => @config.agent_media_max_sessions.to_s,
+      })
     end
   end
 end
