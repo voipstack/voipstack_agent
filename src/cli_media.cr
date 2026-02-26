@@ -14,6 +14,7 @@ pbx_host = "127.0.0.1"
 pbx_port = 5080
 heartbeat_port = nil
 max_sessions = ENV.fetch("MAX_SESSIONS", "10000").to_i
+default_language = ENV.fetch("SPEECH_LANGUAGE", "en")
 
 OptionParser.parse do |parser|
   parser.banner = "Usage: voipstack_agent_media [options]"
@@ -38,6 +39,10 @@ OptionParser.parse do |parser|
     max_sessions = count.to_i
   end
 
+  parser.on("--lang=LANG", "Default language code (default: en, env: SPEECH_LANGUAGE)") do |lang|
+    default_language = lang
+  end
+
   parser.on("-h", "--help", "Display this help message") do
     puts parser
     exit
@@ -50,7 +55,7 @@ class VoipstackWebsocketMediaDumper < VoipstackAudioFork::MediaDumper
   # Store both jitter buffer and websocket for proper cleanup
   record Session, jitter_buffer : VoipstackAudioFork::JitterBuffer, ws : HTTP::WebSocket
 
-  def initialize(@max_sessions : Int32 = 1_000)
+  def initialize(@max_sessions : Int32 = 1_000, @default_language : String = "en")
     @sessions = Hash(String, Session).new
     @mutex = Mutex.new
   end
@@ -64,9 +69,11 @@ class VoipstackWebsocketMediaDumper < VoipstackAudioFork::MediaDumper
         raise "Max sessions limit reached"
       end
 
-      url = render_websocket_url(context)
+      language = extract_language(context)
+      url = render_websocket_url(context, language)
       raise "Missing X-VOIPSTACK-STREAM-IN-URL header" if url.nil? || url.empty?
 
+      Log.info { "Connecting to WebSocket for session #{session_id}: language=#{language}" }
       ws = HTTP::WebSocket.new(URI.parse(url))
       writer = VoipstackAudioFork::WebsocketJitterWriter.new(ws)
       jitter_buffer = VoipstackAudioFork::JitterBuffer.new(writer, write_full_packet: true)
@@ -166,17 +173,28 @@ class VoipstackWebsocketMediaDumper < VoipstackAudioFork::MediaDumper
     end
   end
 
-  private def render_websocket_url(context : Hash(String, String))
-    context["X-VOIPSTACK-STREAM-IN-URL"]?.try(&.to_s)
+  private def render_websocket_url(context : Hash(String, String), language : String) : String?
+    base_url = context["X-VOIPSTACK-STREAM-IN-URL"]?.try(&.to_s)
+    return nil if base_url.nil? || base_url.empty?
+
+    uri = URI.parse(base_url)
+    params = URI::Params.parse(uri.query || "")
+    params["lang"] = language
+    uri.query = params.to_s
+    uri.to_s
+  end
+
+  private def extract_language(context : Hash(String, String)) : String
+    context["X-VOIPSTACK-LANGUAGE"]? || @default_language
   end
 end
 
 audio_fork = VoipstackAudioFork::Server.new
-media_dumper = VoipstackWebsocketMediaDumper.new(max_sessions)
+media_dumper = VoipstackWebsocketMediaDumper.new(max_sessions, default_language)
 
 address = audio_fork.bind_pair(listen_host, listen_port, pbx_host, pbx_port)
 audio_fork.attach_dumper(media_dumper)
-Log.info { "Listening on #{address} (max_sessions=#{max_sessions})" }
+Log.info { "Listening on #{address} (max_sessions=#{max_sessions}, language=#{default_language})" }
 
 # Graceful shutdown handler
 Signal::INT.trap do
