@@ -57,10 +57,15 @@ class Agent::Executor
   end
 
   class SoftswitchInterfaceHandler < Handler
-    def initialize(@softswitch : Agent::SoftswitchState, @command : String, @interface : Hash(String, String), @globals = Hash(String, String).new)
+    def initialize(@softswitch : Agent::SoftswitchState, @command : String, @interface : Hash(String, String), @globals = Hash(String, String).new, @only_for : String? = nil)
     end
 
     def handle_action(action : Agent::Action) : Array(Agent::Event)
+      if @only_for && @softswitch.software != @only_for
+        Log.debug { "[EXECUTOR] SOFTSWITCH INTERFACE HANDLER: only_for=#{@only_for} but software=#{@softswitch.software}, skipping" }
+        return [] of Agent::Event
+      end
+
       interpolated_interface = @interface.clone
       action.arguments.each do |key, value|
         expand_variables("VOIPSTACK_ACTION_INPUT_", key, value, interpolated_interface)
@@ -81,9 +86,9 @@ class Agent::Executor
 
     private def expand_variables(prefix, key, value, variables : Hash(String, String))
       variables.keys.each do |interface_key|
-        key = "#{prefix}#{key.chomp.upcase}"
-        if variables[interface_key].includes? "${#{key}}"
-          variables[interface_key] = variables[interface_key].gsub("${#{key}}", value)
+        full_key = "#{prefix}#{key.chomp.upcase}"
+        if variables[interface_key].includes? "${#{full_key}}"
+          variables[interface_key] = variables[interface_key].gsub("${#{full_key}}", value)
         end
       end
     end

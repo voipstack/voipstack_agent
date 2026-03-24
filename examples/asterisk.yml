@@ -6,3 +6,16 @@ executor:
     command: Hangup
     interface:
       Channel: ${VOIPSTACK_ACTION_VENDOR_CHANNEL}
+  listen:
+    type: softswitch-interface
+    only_for: "asterisk"
+    when:
+      action: start
+      app_id: audio
+    command: Originate
+    interface:
+      Channel: PJSIP/6002/sip:voipstack@${VOIPSTACK_GLOBAL_AGENT_MEDIA_SIP_HOST}:${VOIPSTACK_GLOBAL_AGENT_MEDIA_SIP_PORT}
+      Application: ChanSpy
+      Data: ${VOIPSTACK_ACTION_VENDOR_CHANNEL}
+      Variable: "PJSIP_HEADER(add,X-VOIPSTACK-STREAM-IN-URL)=${VOIPSTACK_ACTION_INPUT_INPUT_STREAM_IN_URL}"
+      Async: true

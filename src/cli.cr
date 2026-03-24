@@ -153,7 +153,8 @@ executor.when(match_web_listen, Agent::Executor::SoftswitchInterfaceHandler.new(
   globals: {
     "agent_media_sip_host" => config.agent_media_sip_host,
     "agent_media_sip_port" => config.agent_media_sip_port.to_s,
-  }
+  },
+  only_for: "freeswitch"
 ))
 
 if action_url.empty?
