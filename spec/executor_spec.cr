@@ -139,4 +139,140 @@ describe Agent::Executor do
 
     test_handler.called.should eq ""
   end
+
+  it "stops execution when break option is set" do
+    first_handler = TestHandler.new
+    second_handler = TestHandler.new
+    executor = Agent::Executor.new
+
+    action = Agent::Action.new(
+      id: "123",
+      app_id: "test",
+      action: "test",
+      handler: "dial",
+      arguments: Agent::ActionArgument.new,
+      handler_arguments: Agent::ActionArgument.new
+    )
+
+    match = Agent::ActionMatch.new
+    match["handler"] = "dial"
+
+    opts = Agent::Executor::Options.new.break(true)
+    executor.when(match, first_handler, opts)
+    executor.when(match, second_handler)
+
+    executor.execute(action)
+
+    first_handler.called.should eq "test"
+    second_handler.called.should eq ""
+  end
+
+  it "continues execution when break option is false" do
+    first_handler = TestHandler.new
+    second_handler = TestHandler.new
+    executor = Agent::Executor.new
+
+    action = Agent::Action.new(
+      id: "123",
+      app_id: "test",
+      action: "test",
+      handler: "dial",
+      arguments: Agent::ActionArgument.new,
+      handler_arguments: Agent::ActionArgument.new
+    )
+
+    match = Agent::ActionMatch.new
+    match["handler"] = "dial"
+
+    opts = Agent::Executor::Options.new.break(false)
+    executor.when(match, first_handler, opts)
+    executor.when(match, second_handler)
+
+    executor.execute(action)
+
+    first_handler.called.should eq "test"
+    second_handler.called.should eq "test"
+  end
+
+  it "continues execution by default without break option" do
+    first_handler = TestHandler.new
+    second_handler = TestHandler.new
+    executor = Agent::Executor.new
+
+    action = Agent::Action.new(
+      id: "123",
+      app_id: "test",
+      action: "test",
+      handler: "dial",
+      arguments: Agent::ActionArgument.new,
+      handler_arguments: Agent::ActionArgument.new
+    )
+
+    match = Agent::ActionMatch.new
+    match["handler"] = "dial"
+
+    executor.when(match, first_handler)
+    executor.when(match, second_handler)
+
+    executor.execute(action)
+
+    first_handler.called.should eq "test"
+    second_handler.called.should eq "test"
+  end
+
+  it "combines skip and break options correctly" do
+    first_handler = TestHandler.new
+    second_handler = TestHandler.new
+    executor = Agent::Executor.new
+
+    action = Agent::Action.new(
+      id: "123",
+      app_id: "test",
+      action: "test",
+      handler: "dial",
+      arguments: Agent::ActionArgument.new,
+      handler_arguments: Agent::ActionArgument.new
+    )
+
+    match = Agent::ActionMatch.new
+    match["handler"] = "dial"
+
+    opts = Agent::Executor::Options.new.skip(true).break(true)
+    executor.when(match, first_handler, opts)
+    executor.when(match, second_handler)
+
+    executor.execute(action)
+
+    first_handler.called.should eq ""
+    second_handler.called.should eq "test"
+  end
+
+  it "stops execution at first matching handler with break" do
+    handler1 = TestHandler.new
+    handler2 = TestHandler.new
+    handler3 = TestHandler.new
+    executor = Agent::Executor.new
+
+    action = Agent::Action.new(
+      id: "123",
+      app_id: "test",
+      action: "test",
+      handler: "dial",
+      arguments: Agent::ActionArgument.new,
+      handler_arguments: Agent::ActionArgument.new
+    )
+
+    match = Agent::ActionMatch.new
+    match["handler"] = "dial"
+
+    executor.when(match, handler1)
+    executor.when(match, handler2, Agent::Executor::Options.new.break(true))
+    executor.when(match, handler3)
+
+    executor.execute(action)
+
+    handler1.called.should eq "test"
+    handler2.called.should eq "test"
+    handler3.called.should eq ""
+  end
 end

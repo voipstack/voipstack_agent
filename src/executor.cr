@@ -4,6 +4,7 @@ class Agent::Executor
   class Options
     def initialize
       @skip = false
+      @break = false
     end
 
     def skip(value)
@@ -13,6 +14,15 @@ class Agent::Executor
 
     def skip?
       @skip
+    end
+
+    def break(value)
+      @break = value
+      self
+    end
+
+    def break?
+      @break
     end
   end
 
@@ -33,6 +43,7 @@ class Agent::Executor
     @handlers.each do |match, handler, opts|
       if action.match?(match) && !opts.skip?
         next_events.concat(handler.handle_action(action))
+        break if opts.break?
       end
     end
     next_events
@@ -160,6 +171,7 @@ module Agent::ExecutorYaml
     property command : String?
     property interface : Hash(String, String)?
     property skip : Bool? = false
+    property break : Bool? = false
   end
 
   struct ExecutorConfig
@@ -183,7 +195,10 @@ module Agent::ExecutorYaml
                   yield action_config
                 end
 
-      executor.when(action_config.when, handler)
+      opts = Agent::Executor::Options.new
+      opts.skip(action_config.skip.not_nil!) if action_config.skip
+      opts.break(action_config.break.not_nil!) if action_config.break
+      executor.when(action_config.when, handler, opts)
     end
 
     executor

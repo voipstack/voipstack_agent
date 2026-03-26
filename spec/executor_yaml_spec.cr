@@ -194,4 +194,110 @@ describe Agent::ExecutorYaml do
     events = executor.execute(action)
     events.size.should eq 0
   end
+
+  it "stops execution when break option is set in YAML" do
+    yaml_content = <<-YAML
+    executor:
+      first_action:
+        type: shell
+        break: true
+        when:
+          action: test
+          handler: dial
+        command: "echo first"
+      second_action:
+        type: shell
+        when:
+          action: test
+          handler: dial
+        command: "echo second"
+    YAML
+
+    executor = Agent::ExecutorYaml.from_yaml(yaml_content) do |action_config|
+      raise "Invalid action configuration"
+    end
+
+    action = Agent::Action.new(
+      id: "123",
+      app_id: "test",
+      action: "test",
+      handler: "dial",
+      arguments: Agent::ActionArgument.new,
+      handler_arguments: Agent::ActionArgument.new
+    )
+
+    events = executor.execute(action)
+    events.size.should eq 0
+  end
+
+  it "continues execution when break is false in YAML" do
+    yaml_content = <<-YAML
+    executor:
+      first_action:
+        type: shell
+        break: false
+        when:
+          action: test
+          handler: dial
+        command: "echo first"
+      second_action:
+        type: shell
+        when:
+          action: test
+          handler: dial
+        command: "echo second"
+    YAML
+
+    executor = Agent::ExecutorYaml.from_yaml(yaml_content) do |action_config|
+      raise "Invalid action configuration"
+    end
+
+    action = Agent::Action.new(
+      id: "123",
+      app_id: "test",
+      action: "test",
+      handler: "dial",
+      arguments: Agent::ActionArgument.new,
+      handler_arguments: Agent::ActionArgument.new
+    )
+
+    events = executor.execute(action)
+    events.size.should eq 0
+  end
+
+  it "combines skip and break options correctly in YAML" do
+    yaml_content = <<-YAML
+    executor:
+      first_action:
+        type: shell
+        skip: true
+        break: true
+        when:
+          action: test
+          handler: dial
+        command: "echo first"
+      second_action:
+        type: shell
+        when:
+          action: test
+          handler: dial
+        command: "echo second"
+    YAML
+
+    executor = Agent::ExecutorYaml.from_yaml(yaml_content) do |action_config|
+      raise "Invalid action configuration"
+    end
+
+    action = Agent::Action.new(
+      id: "123",
+      app_id: "test",
+      action: "test",
+      handler: "dial",
+      arguments: Agent::ActionArgument.new,
+      handler_arguments: Agent::ActionArgument.new
+    )
+
+    events = executor.execute(action)
+    events.size.should eq 0
+  end
 end

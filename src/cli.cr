@@ -144,6 +144,8 @@ executor.when(match_http_post, Agent::Executor::ProxyHTTPPostHandler.new(handler
 match_web_listen = Agent::ActionMatch.new
 match_web_listen["action"] = "start"
 match_web_listen["app_id"] = "audio"
+opts = Agent::Executor::Options.new
+opts.break(true)
 executor.when(match_web_listen, Agent::Executor::SoftswitchInterfaceHandler.new(
   softswitch: softswitch,
   command: "api",
@@ -155,7 +157,7 @@ executor.when(match_web_listen, Agent::Executor::SoftswitchInterfaceHandler.new(
     "agent_media_sip_port" => config.agent_media_sip_port.to_s,
   },
   only_for: "freeswitch"
-))
+), opts)
 
 if action_url.empty?
   action_url = base_action_url + "/#{softswitch.software}/#{softswitch.version}"
