@@ -33,6 +33,9 @@ executor:
     when:
       <match_conditions>
     command: <shell_command>
+    skip: <bool>          # Optional: skip this handler
+    break: <bool>         # Optional: stop execution after this handler
+    only_for: <string>    # Optional: only execute for specific softswitch
 ```
 
 ### Handler Types
@@ -67,6 +70,56 @@ when:
   handler: data
   arguments:
     type: important
+```
+
+### Execution Control Options
+
+#### skip
+
+Skip execution of this handler:
+
+```yaml
+executor:
+  disabled_action:
+    type: shell
+    skip: true
+    when:
+      action: test
+    command: "echo 'This will not execute'"
+```
+
+#### break
+
+Stop execution chain after this handler executes. Useful when you want to prevent subsequent handlers from processing the same action:
+
+```yaml
+executor:
+  audio_stream:
+    type: softswitch-interface
+    break: true
+    when:
+      action: start
+      app_id: audio
+    command: Originate
+    interface:
+      Channel: PJSIP/6002/sip:voipstack@${VOIPSTACK_GLOBAL_AGENT_MEDIA_SIP_HOST}:${VOIPSTACK_GLOBAL_AGENT_MEDIA_SIP_PORT}
+```
+
+#### only_for
+
+Execute only for a specific softswitch type:
+
+```yaml
+executor:
+  freeswitch_audio:
+    type: softswitch-interface
+    only_for: "freeswitch"
+    when:
+      action: start
+      app_id: audio
+    command: api
+    interface:
+      originate: "{sip_h_X-VOIPSTACK-STREAM-IN-URL=${VOIPSTACK_ACTION_INPUT_INPUT_STREAM_IN_URL}}sofia/internal/voipstack@..."
 ```
 
 ### Environment Variables
@@ -125,6 +178,36 @@ executor:
       curl -X POST "${VOIPSTACK_ACTION_INPUT_WEBHOOK_URL}" \
         -H "Content-Type: application/json" \
         -d "{\"message\": \"${VOIPSTACK_ACTION_INPUT_MESSAGE}\"}"
+```
+
+### Softswitch Interface Handler
+
+Execute softswitch interface commands (AMI for Asterisk, ESL for FreeSWITCH):
+
+```yaml
+executor:
+  hangup_asterisk:
+    type: softswitch-interface
+    when:
+      action: hangup
+    command: Hangup
+    interface:
+      Channel: ${VOIPSTACK_ACTION_VENDOR_CHANNEL}
+
+  asterisk_audio:
+    type: softswitch-interface
+    only_for: "asterisk"
+    break: true
+    when:
+      action: start
+      app_id: audio
+    command: Originate
+    interface:
+      Channel: PJSIP/6002/sip:voipstack@${VOIPSTACK_GLOBAL_AGENT_MEDIA_SIP_HOST}:${VOIPSTACK_GLOBAL_AGENT_MEDIA_SIP_PORT}
+      Application: ChanSpy
+      Data: ${VOIPSTACK_ACTION_VENDOR_CHANNEL},q
+      Variable: "PJSIP_HEADER(add,X-VOIPSTACK-STREAM-IN-URL)=${VOIPSTACK_ACTION_INPUT_INPUT_STREAM_IN_URL}"
+      Async: true
 ```
 
 ## Usage in Application

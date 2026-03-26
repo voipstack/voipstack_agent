@@ -54,6 +54,56 @@ Step by step to run the agent:
 VOIPSTACK_AGENT_PRIVATE_KEY_PEM_PATH=voipstack_agent.key ./voipstack_agent -s fs://ClueCon:ClueCon@ip
 ```
 
+## Asterisk Media Support
+
+For Asterisk media support, you can use a custom YAML configuration file. The agent includes default handlers for Asterisk that can be customized via YAML.
+
+### Default Asterisk Handlers
+
+The agent provides built-in handlers for Asterisk:
+
+1. **Hangup Handler** - Handles hangup actions
+2. **Listen Handler** - Handles audio stream start actions (with `break: true` to stop further processing)
+
+### Custom YAML Configuration
+
+Create a custom YAML file (e.g., `asterisk.yml`) to customize Asterisk handlers:
+
+```yaml
+executor:
+  listen:
+    type: softswitch-interface
+    only_for: "asterisk"
+    break: true
+    when:
+      action: start
+      app_id: audio
+    command: Originate
+    interface:
+      Channel: PJSIP/<OUTBOUND ENDPOINT>/sip:voipstack@${VOIPSTACK_GLOBAL_AGENT_MEDIA_SIP_HOST}:${VOIPSTACK_GLOBAL_AGENT_MEDIA_SIP_PORT}
+      Application: ChanSpy
+      Data: ${VOIPSTACK_ACTION_VENDOR_CHANNEL},q
+      Variable: "PJSIP_HEADER(add,X-VOIPSTACK-STREAM-IN-URL)=${VOIPSTACK_ACTION_INPUT_INPUT_STREAM_IN_URL}"
+      Async: true
+```
+
+### Running with Custom YAML
+
+```sh
+./voipstack_agent -s asterisk://ClueCon:ClueCon@ip -c /path/to/asterisk.yml
+```
+
+### Environment Variables for Asterisk
+
+The following environment variables are available for customization:
+
+- `VOIPSTACK_AGENT_MEDIA_SIP_HOST` - Media SIP host (default: 127.0.0.1)
+- `VOIPSTACK_AGENT_MEDIA_SIP_PORT` - Media SIP port (default: 6070)
+
+### Example Asterisk Configuration
+
+See [examples/asterisk.yml](examples/asterisk.yml) for a complete example configuration.
+
 ## Considerations
 
 - The application stops on presence of any error.
