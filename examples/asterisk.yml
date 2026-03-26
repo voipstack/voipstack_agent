@@ -9,13 +9,15 @@ executor:
   listen:
     type: softswitch-interface
     only_for: "asterisk"
+    break: true
     when:
       action: start
       app_id: audio
     command: Originate
     interface:
+      # Example: PJSIP/<OUTBOUND ENDPOINT>/sip:voipstack@${VOIPSTACK_GLOBAL_AGENT_MEDIA_SIP_HOST}:${VOIPSTACK_GLOBAL_AGENT_MEDIA_SIP_PORT}
       Channel: PJSIP/6002/sip:voipstack@${VOIPSTACK_GLOBAL_AGENT_MEDIA_SIP_HOST}:${VOIPSTACK_GLOBAL_AGENT_MEDIA_SIP_PORT}
       Application: ChanSpy
       Data: ${VOIPSTACK_ACTION_VENDOR_CHANNEL},q
       Variable: "PJSIP_HEADER(add,X-VOIPSTACK-STREAM-IN-URL)=${VOIPSTACK_ACTION_INPUT_INPUT_STREAM_IN_URL}"
-      Async: false
+      Async: true
