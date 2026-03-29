@@ -299,7 +299,78 @@ executor:
 - If timeout occurs, the variable is not set but the command continues
 - Errors are logged for debugging
 
-## Usage in Application
+### Capture with Match Conditions
+
+You can conditionally capture only when specific field conditions are met. This is useful for capturing only successful responses:
+
+```yaml
+executor:
+  listen_start:
+    type: softswitch-interface
+    only_for: "asterisk"
+    break: true
+    when:
+      action: start
+      app_id: audio
+    execute: Originate
+    interface:
+      Channel: PJSIP/6002/sip:voipstack@${VOIPSTACK_GLOBAL_AGENT_MEDIA_SIP_HOST}:${VOIPSTACK_GLOBAL_AGENT_MEDIA_SIP_PORT}
+      Application: ChanSpy
+      Data: ${VOIPSTACK_ACTION_VENDOR_CHANNEL},q
+    capture:
+      from: event:OriginateResponse
+      extract: Channel
+      store: VOIPSTACK_SPY
+      target_channel: ${VOIPSTACK_ACTION_VENDOR_CHANNEL}
+      match:
+        interface:
+          Response: Success
+```
+
+**Match Fields:**
+
+- `match.interface`: Contains key-value pairs to match against event/response fields
+- All conditions must match (AND logic) for capture to proceed
+- If conditions don't match, capture is skipped silently
+- If no `match` is specified, all events/responses are captured (backward compatible)
+
+**Multiple Match Conditions:**
+
+```yaml
+capture:
+  from: event:OriginateResponse
+  extract: Channel
+  store: VOIPSTACK_SPY
+  target_channel: ${VOIPSTACK_ACTION_VENDOR_CHANNEL}
+  match:
+    interface:
+      Response: Success
+      Reason: "4"
+```
+
+**FreeSWITCH API Response Matching:**
+
+For FreeSWITCH, match against `status` field:
+
+```yaml
+executor:
+  originate_call:
+    type: softswitch-interface
+    only_for: "freeswitch"
+    when:
+      action: start
+    execute: api
+    interface:
+      originate: "{process_cdr=false}sofia/internal/voipstack@... &park()"
+    capture:
+      from: api_response
+      extract: uuid
+      store: VOIPSTACK_CALL_UUID
+      target_channel: ${VOIPSTACK_ACTION_VENDOR_CHANNEL}
+      match:
+        interface:
+          status: success
+```
 
 ```crystal
 # Create executor

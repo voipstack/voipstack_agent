@@ -143,13 +143,16 @@ class Agent::Executor
       end
 
       begin
+        # Extract match conditions from capture config (nested under 'interface' key)
+        match_conditions = capture.match.try { |m| m["interface"]? }
+
         # Capture response based on softswitch type
         captured_value = nil
         if capture.from.starts_with?("event:")
           event_name = capture.from.sub("event:", "")
-          captured_value = @softswitch.capture_event(event_name, @command, interface, capture.extract)
+          captured_value = @softswitch.capture_event(event_name, @command, interface, capture.extract, capture.wait_timeout_ms, match_conditions)
         elsif capture.from == "api_response"
-          captured_value = @softswitch.capture_api_response(@command, interface)
+          captured_value = @softswitch.capture_api_response(@command, interface, match_conditions)
         else
           Log.error { "[EXECUTOR] Unknown capture source: #{capture.from}" }
           return
@@ -159,6 +162,9 @@ class Agent::Executor
           # Set channel variable
           @softswitch.set_channel_var(target_channel, capture.store, captured_value)
           Log.debug { "[EXECUTOR] Captured value '#{captured_value}' stored as '#{capture.store}' on channel '#{target_channel}'" }
+        elsif match_conditions
+          # Match conditions were specified but didn't match - log debug, not error
+          Log.debug { "[EXECUTOR] Capture skipped - conditions not met for #{capture.from}" }
         else
           Log.error { "[EXECUTOR] Failed to capture value from #{capture.from}" }
         end
@@ -242,6 +248,8 @@ module Agent
     property extract : String
     property store : String
     property target_channel : String
+    property wait_timeout_ms : Int32 = 30000
+    property match : Hash(String, Hash(String, String))?
   end
 
   struct RetrieveConfig

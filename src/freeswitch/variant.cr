@@ -191,7 +191,7 @@ module Agent
     end
 
     # Capture response from API command (FreeSWITCH uses sync responses)
-    def capture_api_response(command : String, input : Hash(String, String)) : String?
+    def capture_api_response(command : String, input : Hash(String, String), match : Hash(String, String)? = nil) : String?
       return nil unless command == "api"
 
       begin
@@ -199,6 +199,25 @@ module Agent
         args = input.map { |key, value| "#{key} #{value}" }.join(" ")
         resp = conn.api(args)
         Log.debug { "[FREESWITCH] Capture API response: #{args} -> #{resp}" }
+
+        # Check match conditions if provided
+        if match
+          # For FreeSWITCH, match against response properties
+          # Extract status and UUID from response like "+OK <uuid>"
+          status = resp.starts_with?("+OK") ? "success" : "failure"
+          all_match = match.all? do |field, expected_value|
+            case field
+            when "status"
+              status == expected_value.downcase
+            else
+              false
+            end
+          end
+          unless all_match
+            Log.debug { "[FREESWITCH] API response did not match conditions: #{match.inspect}" }
+            return nil
+          end
+        end
 
         # Parse response - FreeSWITCH returns "+OK <uuid>" for successful originates
         if resp.starts_with?("+OK ")

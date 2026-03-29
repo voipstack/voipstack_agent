@@ -26,15 +26,21 @@ executor:
       extract: Channel
       store: VOIPSTACK_SPY_CHANNEL
       target_channel: ${VOIPSTACK_ACTION_VENDOR_CHANNEL}
+      wait_timeout_ms: 500
+      match:
+        interface:
+          Response: Failure
   listen_stop:
     type: softswitch-interface
     only_for: "asterisk"
+    break: true
     when:
       action: stop
       app_id: audio
     command: Hangup
     interface:
       Channel: ${VOIPSTACK_SPY_CHANNEL}
+      Async: true
     retrieve:
       source_channel: ${VOIPSTACK_ACTION_VENDOR_CHANNEL}
       extract: VOIPSTACK_SPY_CHANNEL

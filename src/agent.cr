@@ -354,11 +354,11 @@ module Agent
     abstract def version : String
 
     # Capture methods for softswitch-interface actions
-    def capture_event(event_name : String, command : String, input : Hash(String, String), extract_field : String) : String?
+    def capture_event(event_name : String, command : String, input : Hash(String, String), extract_field : String, timeout_ms : Int32 = 30000, match : Hash(String, String)? = nil) : String?
       nil
     end
 
-    def capture_api_response(command : String, input : Hash(String, String)) : String?
+    def capture_api_response(command : String, input : Hash(String, String), match : Hash(String, String)? = nil) : String?
       nil
     end
 

@@ -5,7 +5,7 @@ require "log"
 
 module Agent
   class AsteriskState < SoftswitchState
-    alias CapturePromise = {promise: Channel(Asterisk::Event), event_name: String, extract_field: String}
+    alias CapturePromise = {promise: Channel(Asterisk::Event), event_name: String, extract_field: String, match: Hash(String, String)?}
     
     @conn : Asterisk::Ami::Inbound? = nil
     @events = Channel(Asterisk::Event).new(1024*16)
@@ -257,14 +257,14 @@ module Agent
     end
 
     # Capture event by waiting for specific event type
-    def capture_event(event_name : String, command : String, input : Hash(String, String), extract_field : String) : String?
+    def capture_event(event_name : String, command : String, input : Hash(String, String), extract_field : String, timeout_ms : Int32 = 30000, match : Hash(String, String)? = nil) : String?
       action_id = "capture-#{UUID.v4.hexstring}"
       input_copy = input.clone
       input_copy["ActionID"] = action_id
 
       # Create a channel to receive the response
       promise = Channel(Asterisk::Event).new(1)
-      @capture_promises[action_id] = {promise: promise, event_name: event_name, extract_field: extract_field}
+      @capture_promises[action_id] = {promise: promise, event_name: event_name, extract_field: extract_field, match: match}
 
       begin
         # Send the command
@@ -275,14 +275,14 @@ module Agent
         )
         conn.request(req)
 
-        # Wait for event with timeout
+        # Wait for event with timeout (from YAML config)
         select
         when event = promise.receive
           @capture_promises.delete(action_id)
           return event.get(extract_field)
-        when timeout(30.seconds)
+        when timeout(timeout_ms.milliseconds)
           @capture_promises.delete(action_id)
-          Log.error { "[ASTERISK] Timeout waiting for #{event_name}" }
+          Log.error { "[ASTERISK] Timeout waiting for #{event_name} (#{timeout_ms}ms)" }
           return nil
         end
       rescue ex
@@ -336,11 +336,29 @@ module Agent
     private def process_capture_event(event : Asterisk::Event)
       event_name = event.get("Event")
       action_id = event.get("ActionID")
-      
+
       if action_id && @capture_promises.has_key?(action_id)
         promise_data = @capture_promises[action_id]
         if event_name == promise_data[:event_name]
-          promise_data[:promise].send(event)
+          # Check match conditions if provided
+          if match = promise_data[:match]
+            all_match = match.all? do |field, expected_value|
+              event.get(field) == expected_value
+            end
+            if all_match
+              # Remove from memory and send event
+              @capture_promises.delete(action_id)
+              promise_data[:promise].send(event)
+            else
+              # Conditions didn't match - remove from memory to free up resources
+              @capture_promises.delete(action_id)
+              Log.debug { "[ASTERISK] Capture event #{event_name} did not match conditions: #{match.inspect}, cleaning up" }
+            end
+          else
+            # No match conditions - accept any event
+            @capture_promises.delete(action_id)
+            promise_data[:promise].send(event)
+          end
         end
       end
     end

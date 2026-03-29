@@ -26,8 +26,10 @@ The system SHALL support filtering events and responses before capture based on 
 - **THEN** the system SHALL extract the UUID from the response
 - **AND** store it as a channel variable
 
+## MODIFIED Requirements
+
 ### Requirement: Capture softswitch event responses
-The system SHALL support capturing values from any softswitch event responses and storing them as channel variables for use in subsequent actions.
+The system SHALL support capturing values from any softswitch event responses and storing them as channel variables for use in subsequent actions. Capture MAY be conditional based on match criteria.
 
 #### Scenario: Capture any event field on Asterisk
 - **WHEN** an action with type `softswitch-interface` is executed with `capture.from: event:<EventName>`
@@ -51,15 +53,6 @@ The system SHALL support capturing values from any softswitch event responses an
 - **AND** extract the UUID from the response
 - **AND** execute `uuid_setvar` on the `target_channel` to store the captured value
 
-### Requirement: Use captured values in subsequent actions
-The system SHALL make captured values available as variables in subsequent action configurations.
-
-#### Scenario: Reference captured channel in hangup action
-- **WHEN** a previous action captured a value and stored it as `VOIPSTACK_SPY` on a channel
-- **AND** a subsequent action uses `${VOIPSTACK_SPY}` in its interface configuration
-- **THEN** the system SHALL substitute `${VOIPSTACK_SPY}` with the actual captured value
-- **AND** execute the command with the substituted value
-
 ### Requirement: Capture configuration validation
 The system SHALL validate capture configuration and fail gracefully on misconfiguration.
 
@@ -74,19 +67,19 @@ The system SHALL validate capture configuration and fail gracefully on misconfig
 - **AND** prevent the action from executing
 
 ### Requirement: Capture timeout handling
-The system SHALL handle timeouts when waiting for asynchronous responses with configurable timeout via `wait_timeout_ms`.
+The system SHALL handle timeouts when waiting for asynchronous responses.
 
-#### Scenario: Event timeout on Asterisk with custom timeout
-- **WHEN** an action has `capture.wait_timeout_ms` configured
-- **AND** waiting for an event on Asterisk
-- **AND** no response is received within the configured timeout
-- **THEN** the system SHALL log a timeout error with the timeout duration
-- **AND** return without setting the channel variable
-- **AND** clean up the capture promise from memory
-
-#### Scenario: Event timeout on Asterisk with default timeout
-- **WHEN** waiting for an event on Asterisk without explicit timeout configuration
-- **AND** no response is received within the default timeout (30 seconds)
+#### Scenario: Event timeout on Asterisk
+- **WHEN** waiting for an event on Asterisk
+- **AND** no response is received within a reasonable timeout (e.g., 30 seconds)
 - **THEN** the system SHALL log a timeout error
 - **AND** return without setting the channel variable
-- **AND** clean up the capture promise from memory
+
+### Requirement: Use captured values in subsequent actions
+The system SHALL make captured values available as variables in subsequent action configurations.
+
+#### Scenario: Reference captured channel in hangup action
+- **WHEN** a previous action captured a value and stored it as `VOIPSTACK_SPY` on a channel
+- **AND** a subsequent action uses `${VOIPSTACK_SPY}` in its interface configuration
+- **THEN** the system SHALL substitute `${VOIPSTACK_SPY}` with the actual captured value
+- **AND** execute the command with the substituted value

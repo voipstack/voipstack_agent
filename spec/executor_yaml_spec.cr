@@ -389,4 +389,98 @@ describe Agent::ExecutorYaml do
     events = executor.execute(action)
     events.size.should eq 0
   end
+
+  it "parses capture configuration with match conditions" do
+    yaml_content = <<-YAML
+    executor:
+      capture_action:
+        type: softswitch-interface
+        when:
+          action: start
+          app_id: audio
+        execute: Originate
+        interface:
+          Channel: PJSIP/6002/...
+        capture:
+          from: event:OriginateResponse
+          extract: Channel
+          store: VOIPSTACK_SPY
+          target_channel: "${VOIPSTACK_ACTION_VENDOR_CHANNEL}"
+          match:
+            interface:
+              Response: Success
+    YAML
+
+    executor = Agent::ExecutorYaml.from_yaml(yaml_content) do |action_config|
+      # Verify capture config was parsed correctly with match
+      action_config.capture.should_not be_nil
+      capture = action_config.capture.not_nil!
+      capture.from.should eq("event:OriginateResponse")
+      capture.extract.should eq("Channel")
+      capture.store.should eq("VOIPSTACK_SPY")
+      capture.target_channel.should eq("${VOIPSTACK_ACTION_VENDOR_CHANNEL}")
+
+      # Verify match conditions
+      capture.match.should_not be_nil
+      match = capture.match.not_nil!
+      match["interface"]["Response"].should eq("Success")
+
+      Agent::Executor::ShellHandler.new("echo test")
+    end
+  end
+
+  it "parses capture configuration with multiple match conditions" do
+    yaml_content = <<-YAML
+    executor:
+      capture_action:
+        type: softswitch-interface
+        when:
+          action: start
+        execute: Originate
+        interface:
+          Channel: PJSIP/6002/...
+        capture:
+          from: event:OriginateResponse
+          extract: Channel
+          store: VOIPSTACK_SPY
+          target_channel: PJSIP/original
+          match:
+            interface:
+              Response: Success
+              Reason: "4"
+    YAML
+
+    executor = Agent::ExecutorYaml.from_yaml(yaml_content) do |action_config|
+      capture = action_config.capture.not_nil!
+      match = capture.match.not_nil!["interface"]
+      match["Response"].should eq("Success")
+      match["Reason"].should eq("4")
+      Agent::Executor::ShellHandler.new("echo test")
+    end
+  end
+
+  it "parses capture configuration without match (backward compatibility)" do
+    yaml_content = <<-YAML
+    executor:
+      capture_action:
+        type: softswitch-interface
+        when:
+          action: start
+        execute: Originate
+        interface:
+          Channel: PJSIP/6002/...
+        capture:
+          from: event:OriginateResponse
+          extract: Channel
+          store: VOIPSTACK_SPY
+          target_channel: PJSIP/original
+    YAML
+
+    executor = Agent::ExecutorYaml.from_yaml(yaml_content) do |action_config|
+      capture = action_config.capture.not_nil!
+      capture.from.should eq("event:OriginateResponse")
+      capture.match.should be_nil
+      Agent::Executor::ShellHandler.new("echo test")
+    end
+  end
 end
