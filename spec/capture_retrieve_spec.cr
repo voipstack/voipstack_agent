@@ -24,7 +24,7 @@ describe "Capture and Retrieve" do
 
     # Create a mock softswitch
     mock_softswitch = TestSoftswitchState.new("test-id")
-    
+
     executor = Agent::ExecutorYaml.from_yaml(yaml_content) do |action_config|
       if action_config.type == "softswitch-interface"
         Agent::Executor::SoftswitchInterfaceHandler.new(
@@ -73,7 +73,7 @@ describe "Capture and Retrieve" do
     # Create a mock softswitch with pre-set variable
     mock_softswitch = TestSoftswitchState.new("test-id")
     mock_softswitch.set_test_var("PJSIP/original-channel", "VOIPSTACK_SPY", "PJSIP/spy-channel")
-    
+
     executor = Agent::ExecutorYaml.from_yaml(yaml_content) do |action_config|
       if action_config.type == "softswitch-interface"
         Agent::Executor::SoftswitchInterfaceHandler.new(
@@ -99,7 +99,7 @@ describe "Capture and Retrieve" do
 
     events = executor.execute(action)
     events.should be_a(Array(Agent::Event))
-    
+
     # Verify the interface was updated with retrieved value
     # Note: In real implementation, we'd check the interface was modified
   end
@@ -133,7 +133,7 @@ describe "Capture and Retrieve" do
     YAML
 
     mock_softswitch = TestSoftswitchState.new("test-id")
-    
+
     executor = Agent::ExecutorYaml.from_yaml(yaml_content) do |action_config|
       if action_config.type == "softswitch-interface"
         Agent::Executor::SoftswitchInterfaceHandler.new(

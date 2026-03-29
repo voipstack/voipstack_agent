@@ -6,7 +6,7 @@ require "log"
 module Agent
   class AsteriskState < SoftswitchState
     alias CapturePromise = {promise: Channel(Asterisk::Event), event_name: String, extract_field: String, match: Hash(String, String)?}
-    
+
     @conn : Asterisk::Ami::Inbound? = nil
     @events = Channel(Asterisk::Event).new(1024*16)
     @capture_promises : Hash(String, CapturePromise) = {} of String => CapturePromise
@@ -22,7 +22,7 @@ module Agent
       "1.14"
     end
 
-      EVENTS_TO_PROCESS = %w[
+    EVENTS_TO_PROCESS = %w[
       VIRTUAL
       Newchannel
       Newstate
@@ -312,7 +312,7 @@ module Agent
         }
       )
       resp = conn.request(req)
-      
+
       # Parse response to extract value
       if resp.size > 0
         first = resp.first

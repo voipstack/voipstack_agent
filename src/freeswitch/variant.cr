@@ -240,17 +240,17 @@ module Agent
     # Get channel variable using ESL uuid_getvar
     def get_channel_var(channel : String, variable : String) : String?
       resp = conn.api("uuid_getvar", "#{channel} #{variable}")
-      
+
       if resp.starts_with?("-ERR")
         Log.error { "[FREESWITCH] Error getting channel variable: #{resp}" }
         return nil
       end
-      
+
       # FreeSWITCH returns the value directly, or "_undef_" if not set
       if resp == "_undef_"
         return nil
       end
-      
+
       resp.strip
     rescue ex
       Log.error { "[FREESWITCH] Error getting channel variable: #{ex.message}" }
