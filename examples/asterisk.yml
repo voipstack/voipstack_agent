@@ -21,3 +21,21 @@ executor:
       Data: ${VOIPSTACK_ACTION_VENDOR_CHANNEL},q
       Variable: "PJSIP_HEADER(add,X-VOIPSTACK-STREAM-IN-URL)=${VOIPSTACK_ACTION_INPUT_INPUT_STREAM_IN_URL}"
       Async: true
+    capture:
+      from: event:OriginateResponse
+      extract: Channel
+      store: VOIPSTACK_SPY_CHANNEL
+      target_channel: ${VOIPSTACK_ACTION_VENDOR_CHANNEL}
+  listen_stop:
+    type: softswitch-interface
+    only_for: "asterisk"
+    when:
+      action: stop
+      app_id: audio
+    command: Hangup
+    interface:
+      Channel: ${VOIPSTACK_SPY_CHANNEL}
+    retrieve:
+      source_channel: ${VOIPSTACK_ACTION_VENDOR_CHANNEL}
+      extract: VOIPSTACK_SPY_CHANNEL
+      store: Channel

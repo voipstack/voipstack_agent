@@ -352,6 +352,23 @@ module Agent
     abstract def next_platform_events : Array(Agent::Event)
     abstract def software : String
     abstract def version : String
+
+    # Capture methods for softswitch-interface actions
+    def capture_event(event_name : String, command : String, input : Hash(String, String), extract_field : String) : String?
+      nil
+    end
+
+    def capture_api_response(command : String, input : Hash(String, String)) : String?
+      nil
+    end
+
+    def set_channel_var(channel : String, variable : String, value : String)
+      # Default no-op - implement in subclasses
+    end
+
+    def get_channel_var(channel : String, variable : String) : String?
+      nil
+    end
   end
 
   class Notification

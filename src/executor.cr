@@ -68,7 +68,7 @@ class Agent::Executor
   end
 
   class SoftswitchInterfaceHandler < Handler
-    def initialize(@softswitch : Agent::SoftswitchState, @command : String, @interface : Hash(String, String), @globals = Hash(String, String).new, @only_for : String? = nil)
+    def initialize(@softswitch : Agent::SoftswitchState, @command : String, @interface : Hash(String, String), @globals = Hash(String, String).new, @only_for : String? = nil, @capture : CaptureConfig? = nil, @retrieve : RetrieveConfig? = nil)
     end
 
     def handle_action(action : Agent::Action) : Array(Agent::Event)
@@ -90,9 +90,81 @@ class Agent::Executor
         expand_variables("VOIPSTACK_GLOBAL_", key, value, interpolated_interface)
       end
 
+      # Handle retrieve if configured - read from channel vars into interface
+      if retrieve = @retrieve
+        handle_retrieve(retrieve, interpolated_interface, action)
+      end
+
       Log.debug { "[EXECUTOR] SOFTSWITCH INTERFACE COMMAND: #{interpolated_interface.inspect}" }
 
-      @softswitch.interface_command(@command, interpolated_interface)
+      # Execute command
+      events = @softswitch.interface_command(@command, interpolated_interface)
+
+      # Handle capture if configured
+      if capture = @capture
+        handle_capture(capture, interpolated_interface, action)
+      end
+
+      events
+    end
+
+    private def handle_retrieve(retrieve : RetrieveConfig, interface : Hash(String, String), action : Agent::Action)
+      # Get source channel with variable substitution
+      source_channel = retrieve.source_channel
+      action.arguments.each do |key, value|
+        source_channel = source_channel.gsub("${VOIPSTACK_ACTION_INPUT_#{key.upcase}}", value)
+      end
+      action.vendor.each do |key, value|
+        source_channel = source_channel.gsub("${VOIPSTACK_ACTION_VENDOR_#{key.upcase}}", value)
+      end
+
+      begin
+        # Read channel variable
+        if value = @softswitch.get_channel_var(source_channel, retrieve.extract)
+          # Store in interface using the 'store' name as the key
+          interface[retrieve.store] = value
+          Log.debug { "[EXECUTOR] Retrieved '#{retrieve.extract}' from '#{source_channel}' -> '#{retrieve.store}' = '#{value}'" }
+        else
+          Log.error { "[EXECUTOR] Failed to retrieve '#{retrieve.extract}' from '#{source_channel}'" }
+        end
+      rescue ex
+        Log.error { "[EXECUTOR] Retrieve failed: #{ex.message}" }
+      end
+    end
+
+    private def handle_capture(capture : CaptureConfig, interface : Hash(String, String), action : Agent::Action)
+      # Get target channel with variable substitution
+      target_channel = capture.target_channel
+      action.arguments.each do |key, value|
+        target_channel = target_channel.gsub("${VOIPSTACK_ACTION_INPUT_#{key.upcase}}", value)
+      end
+      action.vendor.each do |key, value|
+        target_channel = target_channel.gsub("${VOIPSTACK_ACTION_VENDOR_#{key.upcase}}", value)
+      end
+
+      begin
+        # Capture response based on softswitch type
+        captured_value = nil
+        if capture.from.starts_with?("event:")
+          event_name = capture.from.sub("event:", "")
+          captured_value = @softswitch.capture_event(event_name, @command, interface, capture.extract)
+        elsif capture.from == "api_response"
+          captured_value = @softswitch.capture_api_response(@command, interface)
+        else
+          Log.error { "[EXECUTOR] Unknown capture source: #{capture.from}" }
+          return
+        end
+
+        if captured_value
+          # Set channel variable
+          @softswitch.set_channel_var(target_channel, capture.store, captured_value)
+          Log.debug { "[EXECUTOR] Captured value '#{captured_value}' stored as '#{capture.store}' on channel '#{target_channel}'" }
+        else
+          Log.error { "[EXECUTOR] Failed to capture value from #{capture.from}" }
+        end
+      rescue ex
+        Log.error { "[EXECUTOR] Capture failed: #{ex.message}" }
+      end
     end
 
     private def expand_variables(prefix, key, value, variables : Hash(String, String))
@@ -162,6 +234,25 @@ class Agent::Executor
   end
 end
 
+module Agent
+  struct CaptureConfig
+    include YAML::Serializable
+
+    property from : String
+    property extract : String
+    property store : String
+    property target_channel : String
+  end
+
+  struct RetrieveConfig
+    include YAML::Serializable
+
+    property source_channel : String
+    property extract : String
+    property store : String
+  end
+end
+
 module Agent::ExecutorYaml
   struct ActionConfig
     include YAML::Serializable
@@ -172,6 +263,8 @@ module Agent::ExecutorYaml
     property interface : Hash(String, String)?
     property skip : Bool? = false
     property break : Bool? = false
+    property capture : CaptureConfig?
+    property retrieve : RetrieveConfig?
   end
 
   struct ExecutorConfig

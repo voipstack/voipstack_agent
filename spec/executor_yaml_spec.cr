@@ -265,6 +265,95 @@ describe Agent::ExecutorYaml do
     events.size.should eq 0
   end
 
+  it "parses capture configuration in YAML" do
+    yaml_content = <<-YAML
+    executor:
+      capture_action:
+        type: softswitch-interface
+        when:
+          action: start
+          app_id: audio
+        execute: Originate
+        interface:
+          Channel: PJSIP/6002/...
+          Application: ChanSpy
+          Data: "PJSIP/channel,q"
+        capture:
+          from: originate_response
+          extract: Channel
+          store: VOIPSTACK_SPY
+          target_channel: "${VOIPSTACK_ACTION_VENDOR_CHANNEL}"
+    YAML
+
+    executor = Agent::ExecutorYaml.from_yaml(yaml_content) do |action_config|
+      # Verify capture config was parsed correctly
+      action_config.capture.should_not be_nil
+      capture = action_config.capture.not_nil!
+      capture.from.should eq("originate_response")
+      capture.extract.should eq("Channel")
+      capture.store.should eq("VOIPSTACK_SPY")
+      capture.target_channel.should eq("${VOIPSTACK_ACTION_VENDOR_CHANNEL}")
+      Agent::Executor::ShellHandler.new("echo test")
+    end
+  end
+
+  it "allows actions without capture configuration" do
+    yaml_content = <<-YAML
+    executor:
+      no_capture_action:
+        type: shell
+        when:
+          action: test
+          handler: dial
+        command: "echo test"
+    YAML
+
+    executor = Agent::ExecutorYaml.from_yaml(yaml_content) do |action_config|
+      action_config.capture.should be_nil
+      Agent::Executor::ShellHandler.new("echo test")
+    end
+
+    action = Agent::Action.new(
+      id: "123",
+      app_id: "test",
+      action: "test",
+      handler: "dial",
+      arguments: Agent::ActionArgument.new,
+      handler_arguments: Agent::ActionArgument.new
+    )
+
+    events = executor.execute(action)
+    events.should be_a(Array(Agent::Event))
+  end
+
+  it "parses retrieve configuration in YAML" do
+    yaml_content = <<-YAML
+    executor:
+      retrieve_action:
+        type: softswitch-interface
+        when:
+          action: stop
+          app_id: audio
+        execute: Hangup
+        interface:
+          Channel: "${CHANNEL}"
+        retrieve:
+          source_channel: "${VOIPSTACK_ACTION_VENDOR_CHANNEL}"
+          extract: VOIPSTACK_SPY
+          store: SPY_CHANNEL
+    YAML
+
+    executor = Agent::ExecutorYaml.from_yaml(yaml_content) do |action_config|
+      # Verify retrieve config was parsed correctly
+      action_config.retrieve.should_not be_nil
+      retrieve = action_config.retrieve.not_nil!
+      retrieve.source_channel.should eq("${VOIPSTACK_ACTION_VENDOR_CHANNEL}")
+      retrieve.extract.should eq("VOIPSTACK_SPY")
+      retrieve.store.should eq("SPY_CHANNEL")
+      Agent::Executor::ShellHandler.new("echo test")
+    end
+  end
+
   it "combines skip and break options correctly in YAML" do
     yaml_content = <<-YAML
     executor:

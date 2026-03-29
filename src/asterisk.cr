@@ -5,8 +5,11 @@ require "log"
 
 module Agent
   class AsteriskState < SoftswitchState
+    alias CapturePromise = {promise: Channel(Asterisk::Event), event_name: String, extract_field: String}
+    
     @conn : Asterisk::Ami::Inbound? = nil
     @events = Channel(Asterisk::Event).new(1024*16)
+    @capture_promises : Hash(String, CapturePromise) = {} of String => CapturePromise
 
     def initialize(@softswitch_id : String, driver_config_path = nil)
     end
@@ -19,7 +22,7 @@ module Agent
       "1.14"
     end
 
-    EVENTS_TO_PROCESS = %w[
+      EVENTS_TO_PROCESS = %w[
       VIRTUAL
       Newchannel
       Newstate
@@ -32,6 +35,7 @@ module Agent
       AgentCalled
       AgentRingNoAnswer
       QueueStatus
+      OriginateResponse
     ]
 
     def setup(config, driver_config_path = nil)
@@ -46,6 +50,9 @@ module Agent
       else
         spawn name: "asterisk: events" do
           conn.pull_events do |event|
+            # Process capture events first
+            process_capture_event(event)
+
             next if !EVENTS_TO_PROCESS.includes?(event.get("Event", ""))
             @events.send(event)
           end
@@ -247,6 +254,95 @@ module Agent
         data: payload.payload,
         signature: payload.signature
       )
+    end
+
+    # Capture event by waiting for specific event type
+    def capture_event(event_name : String, command : String, input : Hash(String, String), extract_field : String) : String?
+      action_id = "capture-#{UUID.v4.hexstring}"
+      input_copy = input.clone
+      input_copy["ActionID"] = action_id
+
+      # Create a channel to receive the response
+      promise = Channel(Asterisk::Event).new(1)
+      @capture_promises[action_id] = {promise: promise, event_name: event_name, extract_field: extract_field}
+
+      begin
+        # Send the command
+        req = Asterisk::Action.new(
+          command,
+          action_id,
+          header: input_copy
+        )
+        conn.request(req)
+
+        # Wait for event with timeout
+        select
+        when event = promise.receive
+          @capture_promises.delete(action_id)
+          return event.get(extract_field)
+        when timeout(30.seconds)
+          @capture_promises.delete(action_id)
+          Log.error { "[ASTERISK] Timeout waiting for #{event_name}" }
+          return nil
+        end
+      rescue ex
+        @capture_promises.delete(action_id)
+        Log.error { "[ASTERISK] Error capturing #{event_name}: #{ex.message}" }
+        return nil
+      end
+    end
+
+    # Set channel variable using AMI SetVar
+    def set_channel_var(channel : String, variable : String, value : String)
+      req = Asterisk::Action.new(
+        "SetVar",
+        UUID.v4.hexstring,
+        header: {
+          "Channel"  => channel,
+          "Variable" => variable,
+          "Value"    => value,
+        }
+      )
+      conn.request(req)
+      Log.debug { "[ASTERISK] Set channel variable: #{variable}=#{value} on #{channel}" }
+    end
+
+    # Get channel variable using AMI GetVar
+    def get_channel_var(channel : String, variable : String) : String?
+      req = Asterisk::Action.new(
+        "GetVar",
+        UUID.v4.hexstring,
+        header: {
+          "Channel"  => channel,
+          "Variable" => variable,
+        }
+      )
+      resp = conn.request(req)
+      
+      # Parse response to extract value
+      if resp.size > 0
+        first = resp.first
+        if first && first.get("Response") == "Success"
+          return first.get("Value")
+        end
+      end
+      nil
+    rescue ex
+      Log.error { "[ASTERISK] Error getting channel variable: #{ex.message}" }
+      nil
+    end
+
+    # Process events and fulfill capture promises
+    private def process_capture_event(event : Asterisk::Event)
+      event_name = event.get("Event")
+      action_id = event.get("ActionID")
+      
+      if action_id && @capture_promises.has_key?(action_id)
+        promise_data = @capture_promises[action_id]
+        if event_name == promise_data[:event_name]
+          promise_data[:promise].send(event)
+        end
+      end
     end
   end
 end

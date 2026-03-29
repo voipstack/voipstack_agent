@@ -190,6 +190,56 @@ module Agent
     def publish_mapping(next_events, conn, softswitch_id)
     end
 
+    # Capture response from API command (FreeSWITCH uses sync responses)
+    def capture_api_response(command : String, input : Hash(String, String)) : String?
+      return nil unless command == "api"
+
+      begin
+        # Build the API command string from input hash
+        args = input.map { |key, value| "#{key} #{value}" }.join(" ")
+        resp = conn.api(args)
+        Log.debug { "[FREESWITCH] Capture API response: #{args} -> #{resp}" }
+
+        # Parse response - FreeSWITCH returns "+OK <uuid>" for successful originates
+        if resp.starts_with?("+OK ")
+          uuid = resp.split(" ")[1]?.try(&.strip)
+          return uuid
+        else
+          Log.error { "[FREESWITCH] Unexpected API response format: #{resp}" }
+          return nil
+        end
+      rescue ex
+        Log.error { "[FREESWITCH] Error capturing API response: #{ex.message}" }
+        return nil
+      end
+    end
+
+    # Set channel variable using ESL uuid_setvar
+    def set_channel_var(channel : String, variable : String, value : String)
+      conn.api("uuid_setvar", "#{channel} #{variable} #{value}")
+      Log.debug { "[FREESWITCH] Set channel variable: #{variable}=#{value} on #{channel}" }
+    end
+
+    # Get channel variable using ESL uuid_getvar
+    def get_channel_var(channel : String, variable : String) : String?
+      resp = conn.api("uuid_getvar", "#{channel} #{variable}")
+      
+      if resp.starts_with?("-ERR")
+        Log.error { "[FREESWITCH] Error getting channel variable: #{resp}" }
+        return nil
+      end
+      
+      # FreeSWITCH returns the value directly, or "_undef_" if not set
+      if resp == "_undef_"
+        return nil
+      end
+      
+      resp.strip
+    rescue ex
+      Log.error { "[FREESWITCH] Error getting channel variable: #{ex.message}" }
+      nil
+    end
+
     private def events
       @events.not_nil!
     end

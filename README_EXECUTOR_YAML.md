@@ -210,6 +210,95 @@ executor:
       Async: true
 ```
 
+### Capture Configuration
+
+Capture responses from softswitch commands and store them as channel variables for use in subsequent actions:
+
+```yaml
+executor:
+  listen_start:
+    type: softswitch-interface
+    only_for: "asterisk"
+    break: true
+    when:
+      action: start
+      app_id: audio
+    execute: Originate
+    interface:
+      Channel: PJSIP/6002/sip:voipstack@${VOIPSTACK_GLOBAL_AGENT_MEDIA_SIP_HOST}:${VOIPSTACK_GLOBAL_AGENT_MEDIA_SIP_PORT}
+      Application: ChanSpy
+      Data: ${VOIPSTACK_ACTION_VENDOR_CHANNEL},q
+    capture:
+      from: originate_response
+      extract: Channel
+      store: VOIPSTACK_SPY
+      target_channel: ${VOIPSTACK_ACTION_VENDOR_CHANNEL}
+
+  listen_stop:
+    type: softswitch-interface
+    only_for: "asterisk"
+    when:
+      action: stop
+      app_id: audio
+    execute: Hangup
+    interface:
+      Channel: ${VOIPSTACK_SPY}
+```
+
+**Capture Fields:**
+
+- `from`: Source of the response
+  - `event:<EventName>` - For Asterisk events (e.g., `event:OriginateResponse`, `event:Newchannel`)
+  - `api_response` - For FreeSWITCH synchronous API responses
+- `extract`: Field to extract from the response (e.g., `Channel`, `Uniqueid`, `uuid`)
+- `store`: Variable name to store the captured value
+- `target_channel`: Channel on which to set the variable (supports variable substitution)
+
+**Capture from Newchannel event (Asterisk):**
+
+```yaml
+executor:
+  track_new_channel:
+    type: softswitch-interface
+    only_for: "asterisk"
+    when:
+      action: create
+    execute: Originate
+    interface:
+      Channel: PJSIP/6002/...
+    capture:
+      from: event:Newchannel
+      extract: Uniqueid
+      store: VOIPSTACK_CREATED_CHANNEL_UID
+      target_channel: ${VOIPSTACK_ACTION_VENDOR_CHANNEL}
+```
+
+**FreeSWITCH Example:**
+
+```yaml
+executor:
+  listen_start:
+    type: softswitch-interface
+    only_for: "freeswitch"
+    when:
+      action: start
+      app_id: audio
+    execute: api
+    interface:
+      originate: "{process_cdr=false,sip_h_X-VOIPSTACK-STREAM-IN-URL=${VOIPSTACK_ACTION_INPUT_INPUT_STREAM_IN_URL}}sofia/internal/voipstack@${VOIPSTACK_GLOBAL_AGENT_MEDIA_SIP_HOST}:${VOIPSTACK_GLOBAL_AGENT_MEDIA_SIP_PORT} &eavesdrop(${VOIPSTACK_ACTION_INPUT_CALL_UUID})"
+    capture:
+      from: api_response
+      extract: uuid
+      store: VOIPSTACK_SPY
+      target_channel: ${VOIPSTACK_ACTION_INPUT_CALL_UUID}
+```
+
+**Timeout Behavior:**
+
+- Capture operations have a 30-second timeout
+- If timeout occurs, the variable is not set but the command continues
+- Errors are logged for debugging
+
 ## Usage in Application
 
 ```crystal

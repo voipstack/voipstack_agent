@@ -120,10 +120,17 @@ if softswitch_config_path
         raise "softswitch-interface requires interface" unless action_config.interface
         raise "softswitch-interface requires command" unless action_config.command
         interface = action_config.interface.not_nil!.clone
-        Agent::Executor::SoftswitchInterfaceHandler.new(softswitch: softswitch, command: action_config.command.not_nil!, interface: interface, globals: {
-          "agent_media_sip_host" => config.agent_media_sip_host,
-          "agent_media_sip_port" => config.agent_media_sip_port.to_s,
-        })
+        Agent::Executor::SoftswitchInterfaceHandler.new(
+          softswitch: softswitch,
+          command: action_config.command.not_nil!,
+          interface: interface,
+          globals: {
+            "agent_media_sip_host" => config.agent_media_sip_host,
+            "agent_media_sip_port" => config.agent_media_sip_port.to_s,
+          },
+          capture: action_config.capture,
+          retrieve: action_config.retrieve
+        )
       else
         raise "Unknown action type: #{action_config.type}"
       end
