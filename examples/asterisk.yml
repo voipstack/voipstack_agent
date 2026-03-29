@@ -29,7 +29,7 @@ executor:
       wait_timeout_ms: 500
       match:
         interface:
-          Response: Failure
+          Response: Success
   listen_stop:
     type: softswitch-interface
     only_for: "asterisk"

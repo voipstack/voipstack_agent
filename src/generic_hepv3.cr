@@ -42,7 +42,7 @@ module Agent
       Array(Agent::Event).new
     end
 
-    def interface_command(command : String, input : Hash(String, String)) : Array(Agent::Event)
+    def interface_command(command : String, input : Hash(String, String), capture : CaptureConfig? = nil) : Array(Agent::Event)
       next_events = [] of Agent::Event
       next_events
     end

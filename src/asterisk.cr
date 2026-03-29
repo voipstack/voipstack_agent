@@ -50,10 +50,11 @@ module Agent
       else
         spawn name: "asterisk: events" do
           conn.pull_events do |event|
+            next if !EVENTS_TO_PROCESS.includes?(event.get("Event", ""))
+
             # Process capture events first
             process_capture_event(event)
 
-            next if !EVENTS_TO_PROCESS.includes?(event.get("Event", ""))
             @events.send(event)
           end
         rescue ex
@@ -82,19 +83,49 @@ module Agent
       next_events
     end
 
-    def interface_command(command : String, input : Hash(String, String)) : Array(Agent::Event)
-      next_events = [] of Agent::Event
+    def interface_command(command : String, input : Hash(String, String), capture : CaptureConfig? = nil) : Array(Agent::Event)
+      action_id = input["ActionID"]? || UUID.v4.hexstring
 
       req = Asterisk::Action.new(
         command,
-        UUID.v4.hexstring,
+        action_id,
         header: input
       )
       resp = conn.request(req)
       Log.debug { "[ASTERISK] interface_command request: #{req.inspect}" }
       Log.debug { "[ASTERISK] interface_command response: #{resp.inspect}" }
 
-      next_events
+      if capture_config = capture
+        handle_capture_async(action_id, capture_config, input)
+      end
+
+      [] of Agent::Event
+    end
+
+    private def handle_capture_async(action_id : String, capture : CaptureConfig, input : Hash(String, String))
+      return unless capture.from.starts_with?("event:")
+
+      event_name = capture.from.sub("event:", "")
+      extract_field = capture.extract
+      timeout_ms = capture.wait_timeout_ms
+      match_conditions = capture.match.try { |m| m["interface"]? }
+      target_channel = capture.target_channel
+
+      promise = Channel(Asterisk::Event).new(1)
+      @capture_promises[action_id] = {promise: promise, event_name: event_name, extract_field: extract_field, match: match_conditions}
+
+      select
+      when event = promise.receive
+        @capture_promises.delete(action_id)
+        captured_value = event.get(extract_field)
+        if captured_value
+          set_channel_var(target_channel, capture.store, captured_value)
+          Log.debug { "[ASTERISK] Captured value '#{captured_value}' stored as '#{capture.store}' on channel '#{target_channel}'" }
+        end
+      when timeout(timeout_ms.milliseconds)
+        @capture_promises.delete(action_id)
+        Log.error { "[ASTERISK] Timeout waiting for #{event_name} (#{timeout_ms}ms)" }
+      end
     end
 
     def handle_action(action : Agent::Action) : Array(Agent::Event)
@@ -256,43 +287,6 @@ module Agent
       )
     end
 
-    # Capture event by waiting for specific event type
-    def capture_event(event_name : String, command : String, input : Hash(String, String), extract_field : String, timeout_ms : Int32 = 30000, match : Hash(String, String)? = nil) : String?
-      action_id = "capture-#{UUID.v4.hexstring}"
-      input_copy = input.clone
-      input_copy["ActionID"] = action_id
-
-      # Create a channel to receive the response
-      promise = Channel(Asterisk::Event).new(1)
-      @capture_promises[action_id] = {promise: promise, event_name: event_name, extract_field: extract_field, match: match}
-
-      begin
-        # Send the command
-        req = Asterisk::Action.new(
-          command,
-          action_id,
-          header: input_copy
-        )
-        conn.request(req)
-
-        # Wait for event with timeout (from YAML config)
-        select
-        when event = promise.receive
-          @capture_promises.delete(action_id)
-          return event.get(extract_field)
-        when timeout(timeout_ms.milliseconds)
-          @capture_promises.delete(action_id)
-          Log.error { "[ASTERISK] Timeout waiting for #{event_name} (#{timeout_ms}ms)" }
-          return nil
-        end
-      rescue ex
-        @capture_promises.delete(action_id)
-        Log.error { "[ASTERISK] Error capturing #{event_name}: #{ex.message}" }
-        return nil
-      end
-    end
-
-    # Set channel variable using AMI SetVar
     def set_channel_var(channel : String, variable : String, value : String)
       req = Asterisk::Action.new(
         "SetVar",

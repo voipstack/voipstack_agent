@@ -1,13 +1,23 @@
 require "digest/sha256"
 require "http/client"
 require "json"
+require "yaml"
 require "log"
 require "crest"
 require "freeswitch-esl"
 require "phoenixchannels"
 
 module Agent
-  VERSION = "0.1.0"
+  struct CaptureConfig
+    include YAML::Serializable
+
+    property from : String
+    property extract : String
+    property store : String
+    property target_channel : String
+    property wait_timeout_ms : Int32 = 30000
+    property match : Hash(String, Hash(String, String))?
+  end
 
   alias Events = Deque(Event)
 
@@ -294,9 +304,9 @@ module Agent
 
     def execute(&)
       @getter.fetch.each do |action|
-        if @executed_ids.includes?(action.id)
-          next
-        end
+        # if @executed_ids.includes?(action.id)
+        #   next
+        # end
 
         Log.debug { "EXECUTING ACTION #{action.inspect}" }
 
@@ -347,23 +357,13 @@ module Agent
   abstract class SoftswitchState
     abstract def setup(config : Agent::Config, driver_config_path : String?)
     abstract def bootstrap : Array(Agent::Event)
-    abstract def interface_command(command : String, input : Hash(String, String)) : Array(Agent::Event)
+    abstract def interface_command(command : String, input : Hash(String, String), capture : CaptureConfig? = nil) : Array(Agent::Event)
     abstract def handle_action(action : Agent::Action) : Array(Agent::Event)
     abstract def next_platform_events : Array(Agent::Event)
     abstract def software : String
     abstract def version : String
 
-    # Capture methods for softswitch-interface actions
-    def capture_event(event_name : String, command : String, input : Hash(String, String), extract_field : String, timeout_ms : Int32 = 30000, match : Hash(String, String)? = nil) : String?
-      nil
-    end
-
-    def capture_api_response(command : String, input : Hash(String, String), match : Hash(String, String)? = nil) : String?
-      nil
-    end
-
     def set_channel_var(channel : String, variable : String, value : String)
-      # Default no-op - implement in subclasses
     end
 
     def get_channel_var(channel : String, variable : String) : String?

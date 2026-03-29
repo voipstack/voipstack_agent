@@ -49,19 +49,61 @@ module Agent
       next_events
     end
 
-    def interface_command(command : String, input : Hash(String, String)) : Array(Agent::Event)
-      next_events = [] of Agent::Event
-
+    def interface_command(command : String, input : Hash(String, String), capture : CaptureConfig? = nil) : Array(Agent::Event)
       case command
       when "api"
         args = input.map { |key, value| "#{key} #{value}" }.join(" ")
         resp = conn.api(args)
-        Log.debug { "[EXECUTOR][FREESWITCH] API command executed: #{command} with args: #{args} -> #{resp}" }
+        Log.debug { "[FREESWITCH] API command executed: #{args} -> #{resp}" }
+
+        if capture_config = capture
+          handle_capture_sync(resp, capture_config, input)
+        end
       else
-        conn.conn.sendmsg(input["call-uuid"] || nil, command, input, "")
+        conn.conn.sendmsg(input["call-uuid"]? || nil, command, input, "")
       end
 
-      next_events
+      [] of Agent::Event
+    end
+
+    private def handle_capture_sync(resp : String, capture : CaptureConfig, input : Hash(String, String))
+      return unless capture.from == "api_response"
+
+      match_conditions = capture.match.try { |m| m["interface"]? }
+      if match_conditions
+        all_match = match_conditions.all? do |field, expected_value|
+          case field
+          when "Response"
+            (resp.starts_with?("+OK") && expected_value == "Success") ||
+              (resp.starts_with?("-ERR") && expected_value == "Error")
+          else
+            false
+          end
+        end
+        unless all_match
+          Log.debug { "[FREESWITCH] API response did not match conditions: #{match_conditions.inspect}" }
+          return
+        end
+      end
+
+      captured_value = nil
+      case capture.extract
+      when "Channel"
+        if resp.starts_with?("+OK ")
+          captured_value = resp.split(" ")[1]?.try(&.strip)
+        end
+      else
+        Log.error { "[FREESWITCH] Unknown extract field: #{capture.extract}" }
+        return
+      end
+
+      if captured_value
+        target_channel = capture.target_channel
+        set_channel_var(target_channel, capture.store, captured_value)
+        Log.debug { "[FREESWITCH] Captured value '#{captured_value}' stored as '#{capture.store}' on channel '#{target_channel}'" }
+      else
+        Log.error { "[FREESWITCH] Failed to capture value from api_response" }
+      end
     end
 
     def handle_action(action : Agent::Action) : Array(Agent::Event)
@@ -190,50 +232,6 @@ module Agent
     def publish_mapping(next_events, conn, softswitch_id)
     end
 
-    # Capture response from API command (FreeSWITCH uses sync responses)
-    def capture_api_response(command : String, input : Hash(String, String), match : Hash(String, String)? = nil) : String?
-      return nil unless command == "api"
-
-      begin
-        # Build the API command string from input hash
-        args = input.map { |key, value| "#{key} #{value}" }.join(" ")
-        resp = conn.api(args)
-        Log.debug { "[FREESWITCH] Capture API response: #{args} -> #{resp}" }
-
-        # Check match conditions if provided
-        if match
-          # For FreeSWITCH, match against response properties
-          # Extract status and UUID from response like "+OK <uuid>"
-          status = resp.starts_with?("+OK") ? "success" : "failure"
-          all_match = match.all? do |field, expected_value|
-            case field
-            when "status"
-              status == expected_value.downcase
-            else
-              false
-            end
-          end
-          unless all_match
-            Log.debug { "[FREESWITCH] API response did not match conditions: #{match.inspect}" }
-            return nil
-          end
-        end
-
-        # Parse response - FreeSWITCH returns "+OK <uuid>" for successful originates
-        if resp.starts_with?("+OK ")
-          uuid = resp.split(" ")[1]?.try(&.strip)
-          return uuid
-        else
-          Log.error { "[FREESWITCH] Unexpected API response format: #{resp}" }
-          return nil
-        end
-      rescue ex
-        Log.error { "[FREESWITCH] Error capturing API response: #{ex.message}" }
-        return nil
-      end
-    end
-
-    # Set channel variable using ESL uuid_setvar
     def set_channel_var(channel : String, variable : String, value : String)
       conn.api("uuid_setvar", "#{channel} #{variable} #{value}")
       Log.debug { "[FREESWITCH] Set channel variable: #{variable}=#{value} on #{channel}" }

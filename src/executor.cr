@@ -1,5 +1,3 @@
-require "yaml"
-
 class Agent::Executor
   class Options
     def initialize
@@ -97,19 +95,10 @@ class Agent::Executor
 
       Log.debug { "[EXECUTOR] SOFTSWITCH INTERFACE COMMAND: #{interpolated_interface.inspect}" }
 
-      # Execute command
-      events = @softswitch.interface_command(@command, interpolated_interface)
-
-      # Handle capture if configured
-      if capture = @capture
-        handle_capture(capture, interpolated_interface, action)
-      end
-
-      events
+      @softswitch.interface_command(@command, interpolated_interface, @capture)
     end
 
     private def handle_retrieve(retrieve : RetrieveConfig, interface : Hash(String, String), action : Agent::Action)
-      # Get source channel with variable substitution
       source_channel = retrieve.source_channel
       action.arguments.each do |key, value|
         source_channel = source_channel.gsub("${VOIPSTACK_ACTION_INPUT_#{key.upcase}}", value)
@@ -119,9 +108,7 @@ class Agent::Executor
       end
 
       begin
-        # Read channel variable
         if value = @softswitch.get_channel_var(source_channel, retrieve.extract)
-          # Store in interface using the 'store' name as the key
           interface[retrieve.store] = value
           Log.debug { "[EXECUTOR] Retrieved '#{retrieve.extract}' from '#{source_channel}' -> '#{retrieve.store}' = '#{value}'" }
         else
@@ -129,47 +116,6 @@ class Agent::Executor
         end
       rescue ex
         Log.error { "[EXECUTOR] Retrieve failed: #{ex.message}" }
-      end
-    end
-
-    private def handle_capture(capture : CaptureConfig, interface : Hash(String, String), action : Agent::Action)
-      # Get target channel with variable substitution
-      target_channel = capture.target_channel
-      action.arguments.each do |key, value|
-        target_channel = target_channel.gsub("${VOIPSTACK_ACTION_INPUT_#{key.upcase}}", value)
-      end
-      action.vendor.each do |key, value|
-        target_channel = target_channel.gsub("${VOIPSTACK_ACTION_VENDOR_#{key.upcase}}", value)
-      end
-
-      begin
-        # Extract match conditions from capture config (nested under 'interface' key)
-        match_conditions = capture.match.try { |m| m["interface"]? }
-
-        # Capture response based on softswitch type
-        captured_value = nil
-        if capture.from.starts_with?("event:")
-          event_name = capture.from.sub("event:", "")
-          captured_value = @softswitch.capture_event(event_name, @command, interface, capture.extract, capture.wait_timeout_ms, match_conditions)
-        elsif capture.from == "api_response"
-          captured_value = @softswitch.capture_api_response(@command, interface, match_conditions)
-        else
-          Log.error { "[EXECUTOR] Unknown capture source: #{capture.from}" }
-          return
-        end
-
-        if captured_value
-          # Set channel variable
-          @softswitch.set_channel_var(target_channel, capture.store, captured_value)
-          Log.debug { "[EXECUTOR] Captured value '#{captured_value}' stored as '#{capture.store}' on channel '#{target_channel}'" }
-        elsif match_conditions
-          # Match conditions were specified but didn't match - log debug, not error
-          Log.debug { "[EXECUTOR] Capture skipped - conditions not met for #{capture.from}" }
-        else
-          Log.error { "[EXECUTOR] Failed to capture value from #{capture.from}" }
-        end
-      rescue ex
-        Log.error { "[EXECUTOR] Capture failed: #{ex.message}" }
       end
     end
 
@@ -241,17 +187,6 @@ class Agent::Executor
 end
 
 module Agent
-  struct CaptureConfig
-    include YAML::Serializable
-
-    property from : String
-    property extract : String
-    property store : String
-    property target_channel : String
-    property wait_timeout_ms : Int32 = 30000
-    property match : Hash(String, Hash(String, String))?
-  end
-
   struct RetrieveConfig
     include YAML::Serializable
 

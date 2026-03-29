@@ -6,7 +6,7 @@ shards:
 
   crest:
     git: https://github.com/mamantoha/crest.git
-    version: 1.6.0
+    version: 1.6.2
 
   freeswitch-esl:
     git: https://github.com/bit4bit/freeswitch-esl.cr.git
@@ -22,7 +22,7 @@ shards:
 
   http_proxy:
     git: https://github.com/mamantoha/http_proxy.git
-    version: 0.13.1
+    version: 0.14.0
 
   openssl_ext:
     git: https://github.com/voipstack/openssl_ext.git
@@ -38,5 +38,5 @@ shards:
 
   voipstack_audio_fork:
     git: https://github.com/voipstack/voipstack_audio_fork.git
-    version: 0.1.1+git.commit.73a11861bfdea5d1ed40549a02442bae92b09692
+    version: 0.1.1+git.commit.2d4f2f7139ff90472555e0b722c2f24202b8cf70
 
