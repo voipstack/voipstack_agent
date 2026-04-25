@@ -9,3 +9,5 @@
 .#**
 **/*.tar.gz
 /.agent-shell/
+node_modules
+**/node_modules
